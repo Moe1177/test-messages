@@ -28,7 +28,7 @@ export function Messaging() {
   const [lastMessage, setLastMessage] = useState<Message | null>(null);
 
   const channelId = "67c4ddbd9ef42e1c0eb7c343";
-  const userId = "67c4dc6427eab20817da216e";
+  const userId = "67c5071c2f3f3c63306870b2";
   const otherUserId = "67c50a6da4d538066589c299";
 
   // WebSocket connection and handlers
@@ -116,7 +116,10 @@ export function Messaging() {
   const fetchCurrentUser = async () => {
     try {
       // Get the JWT token from localStorage or wherever you store it
-      const token = localStorage.getItem('token');
+      const token =
+        "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJtb2UxMTQ3IiwiaWF0IjoxNzQwOTc0NTg3LCJleHAiOjE3NDEwNjA5ODd9.juBpT3qC4iCAJWvKuQS96UElvN52XsiPxTAhVWe82Aw";
+      
+    //   localStorage.getItem('token');
 
       if (!token) {
         console.error("No authentication token found");
@@ -167,7 +170,7 @@ export function Messaging() {
 
   const fetchUsers = async () => {
     try {
-      const response = await fetch("/api/users");
+      const response = await fetch("http://localhost:8080/api/users");
       const data = await handleApiResponse(response);
       setUsers(data);
     } catch (error) {

@@ -1,31 +1,38 @@
 export interface User {
   id: string;
-  name: string;
-  avatar: string;
-  status: "online" | "away" | "offline";
+  userName: string;
+  email: string;
+  password: string;
+  channelIds: string[];
+  directMessageIds: string[];
+  adminsForWhichChannels: string[];
+  status: "ONLINE" | "OFFLINE";
 }
 
 export interface Message {
   id: string;
   content: string;
-  timestamp: Date;
-  sender: User;
   channelId?: string;
-  directMessageId?: string;
+  timestamp: Date;
+  isDirectMessage?: boolean;
+  senderId: string;
 }
 
 export interface Channel {
   id: string;
   name: string;
-  type: "channel";
-  unreadCount: number;
-  memberCount: number;
+  creatorId: string;
   inviteCode: string;
+  memberIds: string[];
+  directMessageMemberIds: string[];
 }
 
 export interface DirectMessage {
-  id: string;
-  type: "direct";
-  participant: User;
-  unreadCount: number;
+  content: string;
+  senderId: string;
+  senderUsername: string;
+  channelId?: string;
+  receiverId: string;
+  isDirectMessage?: boolean;
+  timestamp: Date;
 }
