@@ -61,7 +61,7 @@ export function Messaging() {
   // Initialize connection and fetch initial data
   useEffect(() => {
     // Connect to WebSocket server using a secure WebSocket URL
-    connect("ws://localhost:8080/ws");
+    // connect("ws://localhost:8080/ws");
 
     // Fetch initial data
     fetchCurrentUser();
@@ -69,10 +69,10 @@ export function Messaging() {
     fetchDirectMessages();
     fetchUsers();
 
-    return () => {
-      disconnect();
-    };
-  }, [connect, disconnect]);
+    // return () => {
+    //   disconnect();
+    // };
+  }, []);
 
   useEffect(() => {
     if (connected) {
@@ -367,17 +367,30 @@ export function Messaging() {
     sendMessage("/app/chat.sendMessage", JSON.stringify(messageData));
   };
 
-  const handleCreateChannel = (name: string) => {
+  const handleCreateChannel = async (name: string) => {
     if (!currentUser) return;
 
-    const channelData: Partial<Channel> = {
-      name,
-      creatorId: currentUser.id,
-      type: "GROUP",
-      memberIds: [currentUser.id],
-    };
+    try {
+        const response = await fetch(
+          `http://localhost:8080/api/channels/create-channel?userId=67c5071c2f3f3c63306870b2`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                name: name
+            })
+          }
+        );
 
-    sendMessage("/app/chat.createChannel", JSON.stringify(channelData));
+        console.log("Channel created:", response);
+        const data = await handleApiResponse(response);
+        setChannels((prev) => [...prev, data]);
+    } catch (error) {
+        console.error("Error creating channel:", error);
+    }
+
     setShowCreateChannel(false);
   };
 
