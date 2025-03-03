@@ -27,6 +27,8 @@ export function Messaging() {
   const [selectedChannel, setSelectedChannel] = useState<Channel | null>(null);
 
   const channelId = "67c4ddbd9ef42e1c0eb7c343";
+  const userId = "67c4dc6427eab20817da216e";
+  const otherUserId = "67c50a6da4d538066589c299";
 
   // WebSocket connection and handlers
   const { connected, sendMessage, lastMessage, connect, disconnect } =
@@ -98,7 +100,7 @@ export function Messaging() {
 
   const fetchChannels = async () => {
     try {
-      const response = await fetch("/api/channels");
+      const response = await fetch(`http://localhost:8080/api/channels/user/${userId}`);
       const data = await handleApiResponse(response);
       setChannels(data);
 
@@ -114,7 +116,7 @@ export function Messaging() {
 
   const fetchDirectMessages = async () => {
     try {
-      const response = await fetch("/api/direct-messages");
+      const response = await fetch(`http://localhost:8080/api/channels/direct-message/${userId}`);
       const data = await handleApiResponse(response);
       setDirectMessages(data);
     } catch (error) {
@@ -140,14 +142,14 @@ export function Messaging() {
       const endpoint =
         type === "channel"
           ? `http://localhost:8080/api/messages/channel/${channelId}`
-          : `/api/direct-messages/${conversationId}/messages`;
+          : `http://localhost:8080/api/messages/direct-messages/${otherUserId}`;
 
       const response = await fetch(endpoint);
       const data = await handleApiResponse(response);
       setMessages(data);
     } catch (error) {
       console.error(
-        `Error fetching messages for ${type} ${conversationId}:`,
+        `Error fetching messages for ${type} ${otherUserId}:`,
         error
       );
     }
