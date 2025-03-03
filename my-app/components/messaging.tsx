@@ -25,19 +25,26 @@ export function Messaging() {
   const [showCreateDM, setShowCreateDM] = useState(false);
   const [showChannelInvite, setShowChannelInvite] = useState(false);
   const [selectedChannel, setSelectedChannel] = useState<Channel | null>(null);
+  const [lastMessage, setLastMessage] = useState<Message | null>(null);
 
   const channelId = "67c4ddbd9ef42e1c0eb7c343";
   const userId = "67c4dc6427eab20817da216e";
   const otherUserId = "67c50a6da4d538066589c299";
 
   // WebSocket connection and handlers
-  const { connected, sendMessage, lastMessage, connect, disconnect } =
-    useWebSocket();
+  const {
+    connected,
+    sendMessage,
+    subscribeToDestination,
+    connect,
+    disconnect,
+    error: wsError,
+  } = useWebSocket();
 
   // Initialize connection and fetch initial data
   useEffect(() => {
     // Connect to WebSocket server using a secure WebSocket URL
-    connect("wss://your-backend-url/chat");
+    connect("ws://localhost:8080/ws");
 
     // Fetch initial data
     fetchCurrentUser();
@@ -50,11 +57,29 @@ export function Messaging() {
     };
   }, [connect, disconnect]);
 
+    useEffect(() => {
+        if (connected) {
+          // Create adapter functions to convert IMessage to required types
+          const messageAdapter = (message: any) => handleNewMessage(message as Message);
+          const channelAdapter = (channel: any) => handleChannelCreated(channel as Channel);
+          const dmAdapter = (dm: any) => handleDirectMessageCreated(dm as DirectMessage);
+          const userAdapter = (user: any) => handleUserStatusChanged(user as User);
+          
+          subscribeToDestination("/topic/messages", messageAdapter);
+          subscribeToDestination("/topic/channels", channelAdapter);
+          subscribeToDestination(
+            "/topic/directMessages",
+            dmAdapter
+          );
+          subscribeToDestination("/topic/userStatus", userAdapter);
+        }
+      }, [connected, subscribeToDestination]);
+
   // Handle incoming WebSocket messages
   useEffect(() => {
     if (lastMessage) {
       try {
-        const data = JSON.parse(lastMessage.data);
+        const data = JSON.parse(lastMessage.content);
 
         switch (data.type) {
           case "NEW_MESSAGE":
@@ -90,7 +115,23 @@ export function Messaging() {
   // API calls to fetch data
   const fetchCurrentUser = async () => {
     try {
-      const response = await fetch("/api/user/current");
+      // Get the JWT token from localStorage or wherever you store it
+      const token = localStorage.getItem('token');
+
+      if (!token) {
+        console.error("No authentication token found");
+        return;
+      }
+
+      // Make the request to the correct endpoint with Authorization header
+      const response = await fetch("http://localhost:8080/api/users/currentUser", {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
       const data = await handleApiResponse(response);
       setCurrentUser(data);
     } catch (error) {
@@ -209,23 +250,52 @@ export function Messaging() {
     if (!activeConversation || !currentUser) return;
 
     const messageData = {
-      type: "SEND_MESSAGE",
-      payload: {
+      
         content,
         senderId: currentUser.id,
         ...(activeConversation.type === "channel"
           ? { channelId: activeConversation.id }
           : { directMessageId: activeConversation.id }),
-      },
+      
     };
 
-    sendMessage(JSON.stringify(messageData));
+   sendMessage("/app/chat.sendMessage", JSON.stringify(messageData));
+  };
+
+  const handleCreateChannel = (name: string) => {
+    const channelData = {
+      
+        name,
+        creatorId: currentUser?.id,
+      
+    };
+
+    sendMessage("/app/chat.createChannel", JSON.stringify(channelData));
+    setShowCreateChannel(false);
+  };
+
+  const handleCreateDirectMessage = (userId: string) => {
+    const dmData = {
+        participantIds: [currentUser?.id, userId],
+    };
+
+    sendMessage("/app/chat.createDirectMessage", JSON.stringify(dmData));
+    setShowCreateDM(false);
+  };
+
+  const handleViewChannelInvite = (channel: Channel) => {
+    setSelectedChannel(channel);
+    setShowChannelInvite(true);
   };
 
   const handleConversationSelect = (conversation: Channel | DirectMessage) => {
     setActiveConversation(conversation);
+    setMessages([]); // Clear existing messages
+    fetchMessages(
+      conversation.id,
+      conversation.type === "channel" ? "channel" : "direct"
+    );
 
-    // Reset unread count
     if (conversation.type === "channel") {
       setChannels((prev) =>
         prev.map((channel) =>
@@ -234,45 +304,13 @@ export function Messaging() {
             : channel
         )
       );
-      fetchMessages(conversation.id, "channel");
     } else {
       setDirectMessages((prev) =>
         prev.map((dm) =>
           dm.id === conversation.id ? { ...dm, unreadCount: 0 } : dm
         )
       );
-      fetchMessages(conversation.id, "direct");
     }
-  };
-
-  const handleCreateChannel = (name: string) => {
-    const channelData = {
-      type: "CREATE_CHANNEL",
-      payload: {
-        name,
-        creatorId: currentUser?.id,
-      },
-    };
-
-    sendMessage(JSON.stringify(channelData));
-    setShowCreateChannel(false);
-  };
-
-  const handleCreateDirectMessage = (userId: string) => {
-    const dmData = {
-      type: "CREATE_DIRECT_MESSAGE",
-      payload: {
-        participantIds: [currentUser?.id, userId],
-      },
-    };
-
-    sendMessage(JSON.stringify(dmData));
-    setShowCreateDM(false);
-  };
-
-  const handleViewChannelInvite = (channel: Channel) => {
-    setSelectedChannel(channel);
-    setShowChannelInvite(true);
   };
 
   return (

@@ -1,12 +1,15 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { Client, type Message } from "@stomp/stompjs";
 
 interface WebSocketHook {
   connected: boolean;
-  connecting: boolean;
-  sendMessage: (message: string) => void;
-  lastMessage: MessageEvent | null;
+  sendMessage: (destination: string, body: string) => void;
+  subscribeToDestination: (
+    destination: string,
+    callback: (message: Message) => void
+  ) => void;
   connect: (url: string) => void;
   disconnect: () => void;
   error: Error | null;
@@ -14,88 +17,56 @@ interface WebSocketHook {
 
 export function useWebSocket(): WebSocketHook {
   const [connected, setConnected] = useState(false);
-  const [connecting, setConnecting] = useState(false);
-  const [lastMessage, setLastMessage] = useState<MessageEvent | null>(null);
   const [error, setError] = useState<Error | null>(null);
 
-  const socketRef = useRef<WebSocket | null>(null);
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const urlRef = useRef<string>("");
+  const clientRef = useRef<Client | null>(null);
 
   const connect = useCallback((url: string) => {
-    if (socketRef.current?.readyState === WebSocket.OPEN) {
-      return;
-    }
+    clientRef.current = new Client({
+      brokerURL: url,
+      onConnect: () => {
+        setConnected(true);
+        setError(null);
+        console.log("STOMP connection established");
+      },
+      onStompError: (frame) => {
+        setError(new Error(`STOMP error: ${frame.headers.message}`));
+        console.error("STOMP error", frame);
+      },
+    });
 
-    // Ensure we're using a secure WebSocket connection if the page is served over HTTPS
-    const secureUrl = url.replace(/^ws:/, "wss:");
-    urlRef.current = secureUrl;
-    setConnecting(true);
-    setError(null);
-
-    const socket = new WebSocket(secureUrl);
-
-    socket.onopen = () => {
-      setConnected(true);
-      setConnecting(false);
-      console.log("WebSocket connection established");
-    };
-
-    socket.onmessage = (event) => {
-      setLastMessage(event);
-    };
-
-    socket.onerror = (event) => {
-      console.error("WebSocket error:", event);
-      setError(new Error("WebSocket connection error"));
-      setConnecting(false);
-    };
-
-    socket.onclose = (event) => {
-      setConnected(false);
-      console.log("WebSocket connection closed:", event.code, event.reason);
-
-      // Attempt to reconnect after 3 seconds
-      if (reconnectTimeoutRef.current) {
-        clearTimeout(reconnectTimeoutRef.current);
-      }
-
-      reconnectTimeoutRef.current = setTimeout(() => {
-        if (urlRef.current) {
-          connect(urlRef.current);
-        }
-      }, 3000);
-    };
-
-    socketRef.current = socket;
+    clientRef.current.activate();
   }, []);
 
   const disconnect = useCallback(() => {
-    if (socketRef.current) {
-      socketRef.current.close();
-      socketRef.current = null;
+    if (clientRef.current) {
+      clientRef.current.deactivate();
     }
-
-    if (reconnectTimeoutRef.current) {
-      clearTimeout(reconnectTimeoutRef.current);
-      reconnectTimeoutRef.current = null;
-    }
-
     setConnected(false);
-    setConnecting(false);
     setError(null);
   }, []);
 
-  const sendMessage = useCallback((message: string) => {
-    if (socketRef.current?.readyState === WebSocket.OPEN) {
-      socketRef.current.send(message);
+  const sendMessage = useCallback((destination: string, body: string) => {
+    if (clientRef.current?.connected) {
+      clientRef.current.publish({ destination, body });
     } else {
-      console.error("WebSocket is not connected");
-      setError(new Error("WebSocket is not connected"));
+      console.error("STOMP is not connected");
+      setError(new Error("STOMP is not connected"));
     }
   }, []);
 
-  // Clean up on unmount
+  const subscribeToDestination = useCallback(
+    (destination: string, callback: (message: Message) => void) => {
+      if (clientRef.current?.connected) {
+        clientRef.current.subscribe(destination, callback);
+      } else {
+        console.error("STOMP is not connected");
+        setError(new Error("STOMP is not connected"));
+      }
+    },
+    []
+  );
+
   useEffect(() => {
     return () => {
       disconnect();
@@ -104,9 +75,8 @@ export function useWebSocket(): WebSocketHook {
 
   return {
     connected,
-    connecting,
     sendMessage,
-    lastMessage,
+    subscribeToDestination,
     connect,
     disconnect,
     error,
