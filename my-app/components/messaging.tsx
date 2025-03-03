@@ -84,13 +84,13 @@ export function Messaging() {
       const channelAdapter = (channel: any) =>
         handleChannelCreated(channel as Channel);
       const dmAdapter = (dm: any) =>
-    //     handleDirectMessageCreated(dm as DirectMessage);
-    //   const userAdapter = (user: any) => handleUserStatusChanged(user as User);
+        //     handleDirectMessageCreated(dm as DirectMessage);
+        //   const userAdapter = (user: any) => handleUserStatusChanged(user as User);
 
-      subscribeToDestination("/topic/messages", messageAdapter);
+        subscribeToDestination("/topic/messages", messageAdapter);
       subscribeToDestination("/topic/channels", channelAdapter);
       subscribeToDestination("/topic/directMessages", dmAdapter);
-    //   subscribeToDestination("/topic/userStatus", userAdapter);
+      //   subscribeToDestination("/topic/userStatus", userAdapter);
     }
   }, [connected, subscribeToDestination]);
 
@@ -107,9 +107,9 @@ export function Messaging() {
           case "CHANNEL_CREATED":
             handleChannelCreated(data.payload);
             break;
-        //   case "DIRECT_MESSAGE_CREATED":
-        //     handleDirectMessageCreated(data.payload);
-        //     break;
+          //   case "DIRECT_MESSAGE_CREATED":
+          //     handleDirectMessageCreated(data.payload);
+          //     break;
           case "USER_STATUS_CHANGED":
             handleUserStatusChanged(data.payload);
             break;
@@ -248,9 +248,9 @@ export function Messaging() {
 
       const response = await fetch(endpoint, {
         headers: {
-            "Authorization": `Bearer ${token}`,
-            "Content-Type": "application/json",
-        }
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
       });
       const data = await handleApiResponse(response);
       setMessages(data);
@@ -315,27 +315,27 @@ export function Messaging() {
     setChannels((prev) => [...prev, extendedChannel]);
   };
 
-//   const handleDirectMessageCreated = (dm: DirectMessage) => {
-//     // Create a DirectMessageDisplay from the new DirectMessage
-//     const participant = users.find((u) => u.id === dm.receiverId) || {
-//       id: dm.receiverId,
-//       userName: dm.senderUsername,
-//       status: "OFFLINE",
-//       email: "",
-//       password: "",
-//       channelIds: [],
-//       directMessageIds: [],
-//       adminsForWhichChannels: [],
-//     };
+  //   const handleDirectMessageCreated = (dm: DirectMessage) => {
+  //     // Create a DirectMessageDisplay from the new DirectMessage
+  //     const participant = users.find((u) => u.id === dm.receiverId) || {
+  //       id: dm.receiverId,
+  //       userName: dm.senderUsername,
+  //       status: "OFFLINE",
+  //       email: "",
+  //       password: "",
+  //       channelIds: [],
+  //       directMessageIds: [],
+  //       adminsForWhichChannels: [],
+  //     };
 
-//     const newDmDisplay: DirectMessageDisplay = {
-//       id: dm.channelId || `dm_${dm.senderId}_${dm.receiverId}`,
-//       participant,
-//       unreadCount: 0,
-//     };
+  //     const newDmDisplay: DirectMessageDisplay = {
+  //       id: dm.channelId || `dm_${dm.senderId}_${dm.receiverId}`,
+  //       participant,
+  //       unreadCount: 0,
+  //     };
 
-//     setDirectMessages((prev) => [...prev, newDmDisplay]);
-//   };
+  //     setDirectMessages((prev) => [...prev, newDmDisplay]);
+  //   };
 
   const handleUserStatusChanged = (user: User) => {
     setUsers((prev) => prev.map((u) => (u.id === user.id ? user : u)));
@@ -411,13 +411,12 @@ export function Messaging() {
         {
           method: "POST",
           headers: {
-            "Authorization": `Bearer ${token}`,
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            users: {
-              userId1: "67c5290bdaa0dd6275ea5859",
-              userId2: "67c5071c2f3f3c63306870b2",
-            },
+            user1Id: currentUser.id, // Send flat key-value pairs
+            user2Id: recipientId,
           }),
         }
       );
