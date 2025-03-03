@@ -248,7 +248,8 @@ export function Messaging() {
 
       const response = await fetch(endpoint, {
         headers: {
-            Authorization: `Bearer ${token}`,
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json",
         }
       });
       const data = await handleApiResponse(response);
