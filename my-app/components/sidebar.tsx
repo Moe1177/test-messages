@@ -132,8 +132,8 @@ export function Sidebar({
                 <span className="relative mr-2">
                   <Avatar className="h-5 w-5">
                     <AvatarFallback>
-                      {dm.participant?.userName
-                        ? dm.participant.userName.charAt(0)
+                      {dm.participant?.username
+                        ? dm.participant.username.charAt(0)
                         : "?"}
                     </AvatarFallback>
                   </Avatar>
@@ -146,7 +146,7 @@ export function Sidebar({
                   />
                 </span>
                 <span className="flex-1 truncate">
-                  {dm.participant?.userName || "Unknown User"}
+                  {dm.participant?.username || "Unknown User"}
                 </span>
                 {dm.unreadCount && dm.unreadCount > 0 && (
                   <span className="ml-auto bg-primary text-primary-foreground text-xs rounded-full h-5 min-w-5 flex items-center justify-center px-1">
@@ -176,12 +176,12 @@ export function Sidebar({
         <div className="p-3 border-t flex items-center">
           <Avatar className="h-8 w-8 mr-2">
             <AvatarFallback>
-              {currentUser.userName ? currentUser.userName.charAt(0) : "?"}
+              {currentUser.username ? currentUser.username.charAt(0) : "?"}
             </AvatarFallback>
           </Avatar>
           <div className="flex-1 truncate">
             <div className="text-sm font-medium">
-              {currentUser.userName || "Anonymous"}
+              {currentUser.username || "Anonymous"}
             </div>
             <div className="text-xs text-muted-foreground flex items-center">
               <span className="h-2 w-2 rounded-full bg-green-500 mr-1.5"></span>

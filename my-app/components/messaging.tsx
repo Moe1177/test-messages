@@ -48,7 +48,7 @@ export function Messaging() {
   const userId = "67c5071c2f3f3c63306870b2";
   const otherUserId = "67c50a6da4d538066589c299";
   const token =
-        "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJtb2UxMTQ3IiwiaWF0IjoxNzQwOTc0NTg3LCJleHAiOjE3NDEwNjA5ODd9.juBpT3qC4iCAJWvKuQS96UElvN52XsiPxTAhVWe82Aw";
+    "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJtb2UxMTQ3IiwiaWF0IjoxNzQwOTc0NTg3LCJleHAiOjE3NDEwNjA5ODd9.juBpT3qC4iCAJWvKuQS96UElvN52XsiPxTAhVWe82Aw";
 
   // WebSocket connection and handlers
   const {
@@ -84,13 +84,13 @@ export function Messaging() {
       const channelAdapter = (channel: any) =>
         handleChannelCreated(channel as Channel);
       const dmAdapter = (dm: any) =>
-        handleDirectMessageCreated(dm as DirectMessage);
-      const userAdapter = (user: any) => handleUserStatusChanged(user as User);
+    //     handleDirectMessageCreated(dm as DirectMessage);
+    //   const userAdapter = (user: any) => handleUserStatusChanged(user as User);
 
       subscribeToDestination("/topic/messages", messageAdapter);
       subscribeToDestination("/topic/channels", channelAdapter);
       subscribeToDestination("/topic/directMessages", dmAdapter);
-      subscribeToDestination("/topic/userStatus", userAdapter);
+    //   subscribeToDestination("/topic/userStatus", userAdapter);
     }
   }, [connected, subscribeToDestination]);
 
@@ -107,9 +107,9 @@ export function Messaging() {
           case "CHANNEL_CREATED":
             handleChannelCreated(data.payload);
             break;
-          case "DIRECT_MESSAGE_CREATED":
-            handleDirectMessageCreated(data.payload);
-            break;
+        //   case "DIRECT_MESSAGE_CREATED":
+        //     handleDirectMessageCreated(data.payload);
+        //     break;
           case "USER_STATUS_CHANGED":
             handleUserStatusChanged(data.payload);
             break;
@@ -233,6 +233,7 @@ export function Messaging() {
     try {
       const response = await fetch("http://localhost:8080/api/users");
       const data = await handleApiResponse(response);
+      console.log("Users:", data);
       setUsers(data);
     } catch (error) {
       console.error("Error fetching users:", error);
@@ -245,7 +246,11 @@ export function Messaging() {
         ? `http://localhost:8080/api/messages/channel/${conversationId}`
         : `http://localhost:8080/api/messages/direct-messages/${conversationId}`;
 
-      const response = await fetch(endpoint);
+      const response = await fetch(endpoint, {
+        headers: {
+            Authorization: `Bearer ${token}`,
+        }
+      });
       const data = await handleApiResponse(response);
       setMessages(data);
     } catch (error) {
@@ -309,27 +314,27 @@ export function Messaging() {
     setChannels((prev) => [...prev, extendedChannel]);
   };
 
-  const handleDirectMessageCreated = (dm: DirectMessage) => {
-    // Create a DirectMessageDisplay from the new DirectMessage
-    const participant = users.find((u) => u.id === dm.receiverId) || {
-      id: dm.receiverId,
-      userName: dm.senderUsername,
-      status: "OFFLINE",
-      email: "",
-      password: "",
-      channelIds: [],
-      directMessageIds: [],
-      adminsForWhichChannels: [],
-    };
+//   const handleDirectMessageCreated = (dm: DirectMessage) => {
+//     // Create a DirectMessageDisplay from the new DirectMessage
+//     const participant = users.find((u) => u.id === dm.receiverId) || {
+//       id: dm.receiverId,
+//       userName: dm.senderUsername,
+//       status: "OFFLINE",
+//       email: "",
+//       password: "",
+//       channelIds: [],
+//       directMessageIds: [],
+//       adminsForWhichChannels: [],
+//     };
 
-    const newDmDisplay: DirectMessageDisplay = {
-      id: dm.channelId || `dm_${dm.senderId}_${dm.receiverId}`,
-      participant,
-      unreadCount: 0,
-    };
+//     const newDmDisplay: DirectMessageDisplay = {
+//       id: dm.channelId || `dm_${dm.senderId}_${dm.receiverId}`,
+//       participant,
+//       unreadCount: 0,
+//     };
 
-    setDirectMessages((prev) => [...prev, newDmDisplay]);
-  };
+//     setDirectMessages((prev) => [...prev, newDmDisplay]);
+//   };
 
   const handleUserStatusChanged = (user: User) => {
     setUsers((prev) => prev.map((u) => (u.id === user.id ? user : u)));
@@ -373,24 +378,24 @@ export function Messaging() {
     if (!currentUser) return;
 
     try {
-        const response = await fetch(
-          `http://localhost:8080/api/channels/create-channel?userId=67c5071c2f3f3c63306870b2`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                name: name
-            })
-          }
-        );
+      const response = await fetch(
+        `http://localhost:8080/api/channels/create-channel?userId=67c5071c2f3f3c63306870b2`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            name: name,
+          }),
+        }
+      );
 
-        console.log("Channel created:", response);
-        const data = await handleApiResponse(response);
-        setChannels((prev) => [...prev, data]);
+      console.log("Channel created:", response);
+      const data = await handleApiResponse(response);
+      setChannels((prev) => [...prev, data]);
     } catch (error) {
-        console.error("Error creating channel:", error);
+      console.error("Error creating channel:", error);
     }
 
     setShowCreateChannel(false);
@@ -399,30 +404,29 @@ export function Messaging() {
   const handleCreateDirectMessage = async (recipientId: string) => {
     if (!currentUser) return;
 
-   try {
-     const response = await fetch(
-       `http://localhost:8080/api/channels/direct-message`,
-       {
-         method: "POST",
-         headers: {
-           "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-         },
-         body: JSON.stringify({
-           users: {
-             userId1: "67c5290bdaa0dd6275ea5859",
-             userId2: "67c5071c2f3f3c63306870b2",
-           },
-         }),
-       }
-     );
+    try {
+      const response = await fetch(
+        `http://localhost:8080/api/channels/direct-message`,
+        {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            users: {
+              userId1: "67c5290bdaa0dd6275ea5859",
+              userId2: "67c5071c2f3f3c63306870b2",
+            },
+          }),
+        }
+      );
 
-     console.log("Direct Message channel created:", response);
-     const data = await handleApiResponse(response);
-     setDirectMessages((prev) => [...prev, data]);
-   } catch (error) {
-     console.error("Error creating channel:", error);
-   }
+      console.log("Direct Message channel created:", response);
+      const data = await handleApiResponse(response);
+      setDirectMessages((prev) => [...prev, data]);
+    } catch (error) {
+      console.error("Error creating channel:", error);
+    }
     setShowCreateDM(false);
   };
 
@@ -468,7 +472,7 @@ export function Messaging() {
       if (dm) {
         return {
           receiverId: dm.participant.id,
-          senderUsername: dm.participant.userName,
+          senderUsername: dm.participant.username,
         };
       }
     }

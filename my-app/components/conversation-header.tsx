@@ -38,7 +38,7 @@ export function ConversationHeader({
                 <span className="relative mr-2">
                   <Avatar className="h-6 w-6">
                     <AvatarFallback>
-                      {receiver.userName.charAt(0)}
+                      {receiver.username.charAt(0)}
                     </AvatarFallback>
                   </Avatar>
                   <span
@@ -49,7 +49,7 @@ export function ConversationHeader({
                     }`}
                   />
                 </span>
-                <span className="font-medium">{receiver.userName}</span>
+                <span className="font-medium">{receiver.username}</span>
               </>
             )}
           </>

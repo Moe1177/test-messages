@@ -30,12 +30,6 @@ export function CreateDirectMessageDialog({
 }: CreateDirectMessageDialogProps) {
   const [searchQuery, setSearchQuery] = useState("");
 
-  const filteredUsers = users.filter(
-    (user) =>
-      user.id !== currentUserId &&
-      user.userName?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
   return (
     <Dialog open={true} onOpenChange={onCloseAction}>
       <DialogContent className="sm:max-w-[425px]">
@@ -52,8 +46,8 @@ export function CreateDirectMessageDialog({
           />
         </div>
         <ScrollArea className="h-[300px] pr-4">
-          {filteredUsers.length > 0 ? (
-            filteredUsers.map((user) => (
+          {users.length > 0 ? (
+            users.map((user) => (
               <Button
                 key={user.id}
                 variant="ghost"
@@ -64,7 +58,7 @@ export function CreateDirectMessageDialog({
                   <span className="relative mr-2">
                     <Avatar className="h-8 w-8">
                       <AvatarFallback>
-                        {user.userName ? user.userName.charAt(0) : "?"}
+                        {user.username ? user.username.charAt(0) : "?"}
                       </AvatarFallback>
                     </Avatar>
                     <span
@@ -77,7 +71,7 @@ export function CreateDirectMessageDialog({
                   </span>
                   <div className="ml-2">
                     <div className="font-medium">
-                      {user.userName || "Unknown User"}
+                      {user.username || "Unknown User"}
                     </div>
                     <div className="text-xs text-muted-foreground">
                       {user.status === "ONLINE" ? "Online" : "Offline"}

@@ -88,7 +88,7 @@ export function MessageList({
               >
                 {!isCurrentUser && showAvatar && (
                   <Avatar className="h-8 w-8 mr-2 mt-0.5">
-                    <AvatarFallback>{sender.userName.charAt(0)}</AvatarFallback>
+                    <AvatarFallback>{sender.username.charAt(0)}</AvatarFallback>
                   </Avatar>
                 )}
 
@@ -102,7 +102,7 @@ export function MessageList({
                   {showAvatar && !isCurrentUser && (
                     <div className="flex items-center mb-1">
                       <span className="font-medium text-sm">
-                        {sender.userName}
+                        {sender.username}
                       </span>
                       <span className="text-xs text-muted-foreground ml-2">
                         {formatTime(message.timestamp)}
@@ -132,7 +132,7 @@ export function MessageList({
                 {isCurrentUser && showAvatar && (
                   <Avatar className="h-8 w-8 ml-2 mt-0.5 order-3">
                     <AvatarFallback>
-                      {currentUser?.userName.charAt(0)}
+                      {currentUser?.username.charAt(0)}
                     </AvatarFallback>
                   </Avatar>
                 )}
