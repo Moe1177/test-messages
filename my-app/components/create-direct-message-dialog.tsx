@@ -33,7 +33,7 @@ export function CreateDirectMessageDialog({
   const filteredUsers = users.filter(
     (user) =>
       user.id !== currentUserId &&
-      user.name.toLowerCase().includes(searchQuery.toLowerCase())
+      user.userName.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
@@ -63,27 +63,20 @@ export function CreateDirectMessageDialog({
                 <div className="flex items-center w-full">
                   <span className="relative mr-2">
                     <Avatar className="h-8 w-8">
-                      <AvatarImage src={user.avatar} />
-                      <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+                      <AvatarFallback>{user.userName.charAt(0)}</AvatarFallback>
                     </Avatar>
                     <span
                       className={`absolute bottom-0 right-0 h-2 w-2 rounded-full border border-background ${
-                        user.status === "online"
+                        user.status === "ONLINE"
                           ? "bg-green-500"
-                          : user.status === "away"
-                          ? "bg-yellow-500"
                           : "bg-gray-500"
                       }`}
                     />
                   </span>
                   <div className="ml-2">
-                    <div className="font-medium">{user.name}</div>
+                    <div className="font-medium">{user.userName}</div>
                     <div className="text-xs text-muted-foreground">
-                      {user.status === "online"
-                        ? "Online"
-                        : user.status === "away"
-                        ? "Away"
-                        : "Offline"}
+                      {user.status === "ONLINE" ? "Online" : "Offline"}
                     </div>
                   </div>
                 </div>

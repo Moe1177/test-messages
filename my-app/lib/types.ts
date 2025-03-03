@@ -22,6 +22,7 @@ export interface Channel {
   id: string;
   name: string;
   creatorId: string;
+  type: "DIRECT" | "GROUP";
   inviteCode: string;
   memberIds: string[];
   directMessageMemberIds: string[];

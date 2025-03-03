@@ -8,16 +8,21 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 interface MessageListProps {
   messages: Message[];
   currentUser: User | null;
+  users: Record<string, User>;
 }
 
-export function MessageList({ messages, currentUser }: MessageListProps) {
+export function MessageList({
+  messages,
+  currentUser,
+  users,
+}: MessageListProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, []);
+  }, [messages]);
 
   const formatTime = (date: Date) => {
     return new Date(date).toLocaleTimeString([], {
@@ -67,10 +72,12 @@ export function MessageList({ messages, currentUser }: MessageListProps) {
           </div>
 
           {dateMessages.map((message, index) => {
-            const isCurrentUser = message.sender.id === currentUser?.id;
+            const isCurrentUser = message.senderId === currentUser?.id;
             const showAvatar =
               index === 0 ||
-              dateMessages[index - 1].sender.id !== message.sender.id;
+              dateMessages[index - 1].senderId !== message.senderId;
+
+            const sender = users[message.senderId] || { userName: "Unknown" };
 
             return (
               <div
@@ -81,10 +88,7 @@ export function MessageList({ messages, currentUser }: MessageListProps) {
               >
                 {!isCurrentUser && showAvatar && (
                   <Avatar className="h-8 w-8 mr-2 mt-0.5">
-                    <AvatarImage src={message.sender.avatar} />
-                    <AvatarFallback>
-                      {message.sender.name.charAt(0)}
-                    </AvatarFallback>
+                    <AvatarFallback>{sender.userName.charAt(0)}</AvatarFallback>
                   </Avatar>
                 )}
 
@@ -98,7 +102,7 @@ export function MessageList({ messages, currentUser }: MessageListProps) {
                   {showAvatar && !isCurrentUser && (
                     <div className="flex items-center mb-1">
                       <span className="font-medium text-sm">
-                        {message.sender.name}
+                        {sender.userName}
                       </span>
                       <span className="text-xs text-muted-foreground ml-2">
                         {formatTime(message.timestamp)}
@@ -127,9 +131,8 @@ export function MessageList({ messages, currentUser }: MessageListProps) {
 
                 {isCurrentUser && showAvatar && (
                   <Avatar className="h-8 w-8 ml-2 mt-0.5 order-3">
-                    <AvatarImage src={currentUser?.avatar} />
                     <AvatarFallback>
-                      {currentUser?.name.charAt(0)}
+                      {currentUser?.userName.charAt(0)}
                     </AvatarFallback>
                   </Avatar>
                 )}

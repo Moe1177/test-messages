@@ -1,14 +1,24 @@
-import type { User, Channel, DirectMessage } from "@/lib/types";
+import type { User, Channel } from "@/lib/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Hash, Plus, Settings } from "lucide-react";
 
+interface ExtendedChannel extends Channel {
+  unreadCount?: number;
+}
+
+interface DirectMessageDisplay {
+  id: string;
+  participant: User;
+  unreadCount?: number;
+}
+
 interface SidebarProps {
-  channels: Channel[];
-  directMessages: DirectMessage[];
-  activeConversation: Channel | DirectMessage | null;
-  onConversationSelect: (conversation: Channel | DirectMessage) => void;
+  channels: ExtendedChannel[];
+  directMessages: DirectMessageDisplay[];
+  activeConversationId: string | null;
+  onConversationSelect: (conversationId: string, isChannel: boolean) => void;
   onCreateChannel: () => void;
   onCreateDirectMessage: () => void;
   onViewChannelInvite: (channel: Channel) => void;
@@ -18,7 +28,7 @@ interface SidebarProps {
 export function Sidebar({
   channels,
   directMessages,
-  activeConversation,
+  activeConversationId,
   onConversationSelect,
   onCreateChannel,
   onCreateDirectMessage,
@@ -51,19 +61,19 @@ export function Sidebar({
             <div key={channel.id} className="flex items-center group">
               <Button
                 variant={
-                  activeConversation?.id === channel.id ? "secondary" : "ghost"
+                  activeConversationId === channel.id ? "secondary" : "ghost"
                 }
                 className="w-full justify-start mb-1 px-2 font-normal relative"
-                onClick={() => onConversationSelect(channel)}
+                onClick={() => onConversationSelect(channel.id, true)}
               >
                 <Hash className="mr-2 h-4 w-4" />
                 <span className="flex-1 truncate">{channel.name}</span>
-                {channel.memberCount > 0 && (
+                {channel.memberIds && (
                   <span className="text-xs text-muted-foreground ml-1">
-                    {channel.memberCount}
+                    {channel.memberIds.length}
                   </span>
                 )}
-                {channel.unreadCount > 0 && (
+                {channel.unreadCount && channel.unreadCount > 0 && (
                   <span className="ml-auto bg-primary text-primary-foreground text-xs rounded-full h-5 min-w-5 flex items-center justify-center px-1">
                     {channel.unreadCount}
                   </span>
@@ -97,29 +107,26 @@ export function Sidebar({
           {directMessages.map((dm) => (
             <Button
               key={dm.id}
-              variant={activeConversation?.id === dm.id ? "secondary" : "ghost"}
+              variant={activeConversationId === dm.id ? "secondary" : "ghost"}
               className="w-full justify-start mb-1 px-2 font-normal relative"
-              onClick={() => onConversationSelect(dm)}
+              onClick={() => onConversationSelect(dm.id, false)}
             >
               <span className="relative mr-2">
                 <Avatar className="h-5 w-5">
-                  <AvatarImage src={dm.participant.avatar} />
                   <AvatarFallback>
-                    {dm.participant.name.charAt(0)}
+                    {dm.participant.userName.charAt(0)}
                   </AvatarFallback>
                 </Avatar>
                 <span
                   className={`absolute bottom-0 right-0 h-2 w-2 rounded-full border border-background ${
-                    dm.participant.status === "online"
+                    dm.participant.status === "ONLINE"
                       ? "bg-green-500"
-                      : dm.participant.status === "away"
-                      ? "bg-yellow-500"
                       : "bg-gray-500"
                   }`}
                 />
               </span>
-              <span className="flex-1 truncate">{dm.participant.name}</span>
-              {dm.unreadCount > 0 && (
+              <span className="flex-1 truncate">{dm.participant.userName}</span>
+              {dm.unreadCount && dm.unreadCount > 0 && (
                 <span className="ml-auto bg-primary text-primary-foreground text-xs rounded-full h-5 min-w-5 flex items-center justify-center px-1">
                   {dm.unreadCount}
                 </span>
@@ -132,14 +139,13 @@ export function Sidebar({
       {currentUser && (
         <div className="p-3 border-t flex items-center">
           <Avatar className="h-8 w-8 mr-2">
-            <AvatarImage src={currentUser.avatar} />
-            <AvatarFallback>{currentUser.name.charAt(0)}</AvatarFallback>
+            <AvatarFallback>{currentUser.userName.charAt(0)}</AvatarFallback>
           </Avatar>
           <div className="flex-1 truncate">
-            <div className="text-sm font-medium">{currentUser.name}</div>
+            <div className="text-sm font-medium">{currentUser.userName}</div>
             <div className="text-xs text-muted-foreground flex items-center">
               <span className="h-2 w-2 rounded-full bg-green-500 mr-1.5"></span>
-              Online
+              {currentUser.status === "ONLINE" ? "Online" : "Offline"}
             </div>
           </div>
         </div>
