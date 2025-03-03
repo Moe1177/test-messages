@@ -47,6 +47,8 @@ export function Messaging() {
   const channelId = "67c4ddbd9ef42e1c0eb7c343";
   const userId = "67c5071c2f3f3c63306870b2";
   const otherUserId = "67c50a6da4d538066589c299";
+  const token =
+        "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJtb2UxMTQ3IiwiaWF0IjoxNzQwOTc0NTg3LCJleHAiOjE3NDEwNjA5ODd9.juBpT3qC4iCAJWvKuQS96UElvN52XsiPxTAhVWe82Aw";
 
   // WebSocket connection and handlers
   const {
@@ -394,19 +396,33 @@ export function Messaging() {
     setShowCreateChannel(false);
   };
 
-  const handleCreateDirectMessage = (recipientId: string) => {
+  const handleCreateDirectMessage = async (recipientId: string) => {
     if (!currentUser) return;
 
-    const dmData = {
-      content: "",
-      senderId: currentUser.id,
-      senderUsername: currentUser.userName,
-      receiverId: recipientId,
-      isDirectMessage: true,
-      timestamp: new Date(),
-    };
+   try {
+     const response = await fetch(
+       `http://localhost:8080/api/channels/direct-message`,
+       {
+         method: "POST",
+         headers: {
+           "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+         },
+         body: JSON.stringify({
+           users: {
+             userId1: "67c5290bdaa0dd6275ea5859",
+             userId2: "67c5071c2f3f3c63306870b2",
+           },
+         }),
+       }
+     );
 
-    sendMessage("/app/chat.createDirectMessage", JSON.stringify(dmData));
+     console.log("Direct Message channel created:", response);
+     const data = await handleApiResponse(response);
+     setDirectMessages((prev) => [...prev, data]);
+   } catch (error) {
+     console.error("Error creating channel:", error);
+   }
     setShowCreateDM(false);
   };
 

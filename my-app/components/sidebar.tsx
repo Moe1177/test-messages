@@ -158,7 +158,7 @@ export function Sidebar({
           ) : (
             <div className="px-2 py-3 text-sm text-muted-foreground flex flex-col items-center">
               <MessageSquare className="h-8 w-8 mb-1 opacity-50" />
-              <p>No messages yet</p>
+              <p>No DMs yet</p>
               <Button
                 variant="outline"
                 size="sm"
