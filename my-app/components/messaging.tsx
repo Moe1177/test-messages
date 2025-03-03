@@ -35,7 +35,7 @@ export function Messaging() {
   // Initialize connection and fetch initial data
   useEffect(() => {
     // Connect to WebSocket server using a secure WebSocket URL
-    connect("http://localhost:8080");
+    connect("wss://your-backend-url/chat");
 
     // Fetch initial data
     fetchCurrentUser();
@@ -88,7 +88,7 @@ export function Messaging() {
   // API calls to fetch data
   const fetchCurrentUser = async () => {
     try {
-      const response = await fetch("http://localhost:8080/api/user/current");
+      const response = await fetch("/api/user/current");
       const data = await handleApiResponse(response);
       setCurrentUser(data);
     } catch (error) {
