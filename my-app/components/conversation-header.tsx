@@ -36,11 +36,11 @@ export function ConversationHeader({
             {receiver && (
               <>
                 <span className="relative mr-2">
-                  <Avatar className="h-6 w-6">
+                  {/* <Avatar className="h-6 w-6">
                     <AvatarFallback>
                       {receiver.username.charAt(0)}
                     </AvatarFallback>
-                  </Avatar>
+                  </Avatar> */}
                   <span
                     className={`absolute bottom-0 right-0 h-2 w-2 rounded-full border border-background ${
                       receiver.status === "ONLINE"

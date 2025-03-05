@@ -242,10 +242,7 @@ export function Messaging() {
 
   const fetchMessages = async (conversationId: string, isChannel: boolean) => {
     try {
-      const endpoint = isChannel
-        ? `http://localhost:8080/api/messages/channel/${conversationId}`
-        : `http://localhost:8080/api/messages/direct-messages/${conversationId}`;
-
+      const endpoint = `http://localhost:8080/api/messages/channel/${conversationId}`;
       const response = await fetch(endpoint, {
         headers: {
           Authorization: `Bearer ${token}`,
