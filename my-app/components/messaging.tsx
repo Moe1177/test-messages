@@ -48,7 +48,7 @@ export function Messaging() {
   const userId = "67c5071c2f3f3c63306870b2";
   const otherUserId = "67c50a6da4d538066589c299";
   const token =
-    "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJtb2UxMTQ3IiwiaWF0IjoxNzQwOTc0NTg3LCJleHAiOjE3NDEwNjA5ODd9.juBpT3qC4iCAJWvKuQS96UElvN52XsiPxTAhVWe82Aw";
+    "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJtb2UxMTQ3IiwiaWF0IjoxNzQxMjA2NjA1LCJleHAiOjE3NDEyOTMwMDV9.4dSwRt_AmK-cvMvcGY-3c4wEZrNBBH2Ioyelx28LLJ8";
 
   // WebSocket connection and handlers
   const {
@@ -145,7 +145,7 @@ export function Messaging() {
     try {
       // Get the JWT token from localStorage or wherever you store it
       const token =
-        "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJtb2UxMTQ3IiwiaWF0IjoxNzQwOTc0NTg3LCJleHAiOjE3NDEwNjA5ODd9.juBpT3qC4iCAJWvKuQS96UElvN52XsiPxTAhVWe82Aw";
+        "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJtb2UxMTQ3IiwiaWF0IjoxNzQxMjA2NjA1LCJleHAiOjE3NDEyOTMwMDV9.4dSwRt_AmK-cvMvcGY-3c4wEZrNBBH2Ioyelx28LLJ8";
 
       if (!token) {
         console.error("No authentication token found");
