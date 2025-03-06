@@ -24,11 +24,12 @@ export interface Channel {
   creatorId: string;
   type: "DIRECT" | "GROUP";
   inviteCode: string;
-  memberIds: string[];
-  directMessageMemberIds: string[];
+  members: string[];
+  directMessageMembers: string[];
 }
 
 export interface DirectMessage {
+  id: string
   content: string;
   senderId: string;
   senderUsername: string;

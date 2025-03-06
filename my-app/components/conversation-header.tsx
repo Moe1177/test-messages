@@ -25,9 +25,9 @@ export function ConversationHeader({
           <>
             <Hash className="h-5 w-5 mr-2" />
             <span className="font-medium">{channel?.name}</span>
-            {channel?.memberIds && (
+            {channel?.members && (
               <span className="text-xs text-muted-foreground ml-2">
-                {channel.memberIds.length} members
+                {channel.members.length} members
               </span>
             )}
           </>
@@ -36,11 +36,11 @@ export function ConversationHeader({
             {receiver && (
               <>
                 <span className="relative mr-2">
-                  {/* <Avatar className="h-6 w-6">
+                  <Avatar className="h-6 w-6">
                     <AvatarFallback>
-                      {receiver.username.charAt(0)}
+                      {receiver.username ? receiver.username.charAt(0) : "?"}
                     </AvatarFallback>
-                  </Avatar> */}
+                  </Avatar>
                   <span
                     className={`absolute bottom-0 right-0 h-2 w-2 rounded-full border border-background ${
                       receiver.status === "ONLINE"

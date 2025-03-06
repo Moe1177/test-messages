@@ -1,4 +1,4 @@
-import type { User, Channel } from "@/lib/types";
+import type { User, Channel, DirectMessage } from "@/lib/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -71,16 +71,16 @@ export function Sidebar({
                   <span className="flex-1 truncate">
                     {channel.name || "Unnamed Channel"}
                   </span>
-                  {channel.memberIds && (
+                  {channel.members && (
                     <span className="text-xs text-muted-foreground ml-1">
-                      {channel.memberIds.length}
+                      {channel.members.length}
                     </span>
                   )}
-                  {channel.unreadCount && channel.unreadCount > 0 && (
+                  {/* {channel.unreadCount && channel.unreadCount > 0 && (
                     <span className="ml-auto bg-primary text-primary-foreground text-xs rounded-full h-5 min-w-5 flex items-center justify-center px-1">
                       {channel.unreadCount}
                     </span>
-                  )}
+                  )} */}
                 </Button>
                 <Button
                   variant="ghost"
@@ -132,7 +132,7 @@ export function Sidebar({
                 <span className="relative mr-2">
                   <Avatar className="h-5 w-5">
                     <AvatarFallback>
-                      {dm.participant?.username
+                      {dm?.participant.username
                         ? dm.participant.username.charAt(0)
                         : "?"}
                     </AvatarFallback>

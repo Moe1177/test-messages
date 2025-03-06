@@ -223,7 +223,7 @@ export function Messaging() {
         unreadCount: 0,
       }));
 
-      setDirectMessages(dmDisplays);
+      setDirectMessages(data);
     } catch (error) {
       console.error("Error fetching direct messages:", error);
     }
