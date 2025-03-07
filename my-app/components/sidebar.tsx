@@ -132,7 +132,7 @@ export function Sidebar({
                 <span className="relative mr-2">
                   <Avatar className="h-5 w-5">
                     <AvatarFallback>
-                      {dm?.participant.username
+                      {dm.participant?.username
                         ? dm.participant.username.charAt(0)
                         : "?"}
                     </AvatarFallback>

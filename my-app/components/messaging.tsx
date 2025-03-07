@@ -47,7 +47,7 @@ export function Messaging() {
   const userId = "67c5071c2f3f3c63306870b2";
   const otherUserId = "67c50a6da4d538066589c299";
   const token =
-    "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJtb2UxMTQ3IiwiaWF0IjoxNzQxMjA2NjA1LCJleHAiOjE3NDEyOTMwMDV9.4dSwRt_AmK-cvMvcGY-3c4wEZrNBBH2Ioyelx28LLJ8";
+    "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJtb2UxMTQ3IiwiaWF0IjoxNzQxMzY1MDIzLCJleHAiOjE3NDE0NTE0MjN9.F6vr4p-MWbkbVD5KY0LewL7-mLPKTNCQY6ih1IvQe10";
 
   // WebSocket connection and handlers
   const {
@@ -148,6 +148,16 @@ export function Messaging() {
   // API calls to fetch data
   const fetchCurrentUser = async () => {
     try {
+      // Get the JWT token from localStorage or wherever you store it
+      const token =
+        "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJtb2UxMTQ3IiwiaWF0IjoxNzQxMzY1MDIzLCJleHAiOjE3NDE0NTE0MjN9.F6vr4p-MWbkbVD5KY0LewL7-mLPKTNCQY6ih1IvQe10";
+
+      if (!token) {
+        console.error("No authentication token found");
+        return;
+      }
+
+      // Make the request to the correct endpoint with Authorization header
       const response = await fetch(
         "http://localhost:8080/api/users/currentUser",
         {
@@ -200,23 +210,69 @@ export function Messaging() {
       );
       const data = await handleApiResponse(response);
 
-      // Transform DirectMessage data to match DirectMessageDisplay
-      const dmDisplays: DirectMessageDisplay[] = data.map((dm: any) => ({
-        id: dm.channelId || dm.id,
-        participant: users.find((u) => u.id === dm.receiverId) || {
-          id: dm.receiverId,
-          userName: dm.senderUsername, // Fallback if we don't have the full user object
-          status: "OFFLINE",
-          email: "",
-          password: "",
-          channelIds: [],
-          directMessageIds: [],
-          adminsForWhichChannels: [],
-        },
-        unreadCount: 0,
-      }));
+      console.log("Current user ID:", userId);
+      console.log("Current username:", currentUser?.username);
+      console.log("Raw DM data:", data);
 
-      setDirectMessages(data);
+      // Transform DirectMessage data to match DirectMessageDisplay
+      const dmDisplays: DirectMessageDisplay[] = data.map((dm: any) => {
+        console.log("Processing DM:", dm);
+
+        // Find the ID of the other user (not the current user)
+        const otherMemberId = dm.directMessageMembers.find(
+          (memberId: string) => memberId !== userId
+        );
+        console.log("Other member ID:", otherMemberId);
+
+        // Extract both usernames from the DM name
+        const dmName = dm.name || "";
+        console.log("DM name:", dmName);
+
+        let otherUsername = "Unknown User";
+
+        if (dmName.startsWith("DM:")) {
+          // Remove "DM: " prefix and split by " & "
+          const usernamesPart = dmName.substring(4); // Remove "DM: "
+          const usernames = usernamesPart.split(" & ");
+          console.log("Extracted usernames:", usernames);
+
+          // Current user's username for comparison
+          let currentUsername;
+          const user1 = usernames[0];
+          const user2 = usernames[1];
+          if (user1 === currentUser?.username) {
+            currentUsername = user2;
+          } else {
+            currentUsername = user1;
+          }
+
+          console.log("Comparing with current username:", currentUsername);
+
+          // If we have exactly two usernames and one matches the current user
+          if (usernames.length === 2) {
+            otherUsername =
+              usernames[0] === currentUsername ? usernames[1] : usernames[0];
+          }
+
+          console.log("Selected other username:", otherUsername);
+        }
+
+        return {
+          id: dm.id,
+          participant: {
+            id: otherMemberId || "unknown",
+            username: otherUsername,
+            status: "OFFLINE",
+            email: "",
+            channelIds: [],
+            directMessageIds: [],
+          },
+          unreadCount: 0,
+        };
+      });
+
+      console.log("Transformed DM displays:", dmDisplays);
+      setDirectMessages(dmDisplays);
     } catch (error) {
       console.error("Error fetching direct messages:", error);
     }
