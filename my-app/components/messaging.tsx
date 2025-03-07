@@ -42,7 +42,6 @@ export function Messaging() {
   const [showCreateDM, setShowCreateDM] = useState(false);
   const [showChannelInvite, setShowChannelInvite] = useState(false);
   const [selectedChannel, setSelectedChannel] = useState<Channel | null>(null);
-  const [lastMessage, setLastMessage] = useState<Message | null>(null);
 
   const channelId = "67c4ddbd9ef42e1c0eb7c343";
   const userId = "67c5071c2f3f3c63306870b2";
@@ -55,6 +54,7 @@ export function Messaging() {
     connected,
     sendMessage,
     subscribeToDestination,
+    unsubscribeFromDestination,
     connect,
     disconnect,
     error: wsError,
@@ -62,8 +62,11 @@ export function Messaging() {
 
   // Initialize connection and fetch initial data
   useEffect(() => {
-    // Connect to WebSocket server using a secure WebSocket URL
-    // connect("ws://localhost:8080/ws");
+    // Store token in localStorage for the WebSocket hook to use
+    localStorage.setItem("token", token);
+
+    // Connect to WebSocket server with SockJS
+    connect("http://localhost:8080/ws");
 
     // Fetch initial data
     fetchCurrentUser();
@@ -71,56 +74,58 @@ export function Messaging() {
     fetchDirectMessages();
     fetchUsers();
 
-    // return () => {
-    //   disconnect();
-    // };
-  }, []);
+    return () => {
+      disconnect();
+    };
+  }, [connect, disconnect]);
 
+  // Set up WebSocket subscriptions based on current state
   useEffect(() => {
     if (connected) {
-      // Create adapter functions to convert IMessage to required types
-      const messageAdapter = (message: any) =>
-        handleNewMessage(message as Message);
-      const channelAdapter = (channel: any) =>
-        handleChannelCreated(channel as Channel);
-      const dmAdapter = (dm: any) =>
-        //     handleDirectMessageCreated(dm as DirectMessage);
-        //   const userAdapter = (user: any) => handleUserStatusChanged(user as User);
-
-        subscribeToDestination("/topic/messages", messageAdapter);
-      subscribeToDestination("/topic/channels", channelAdapter);
-      subscribeToDestination("/topic/directMessages", dmAdapter);
-      //   subscribeToDestination("/topic/userStatus", userAdapter);
-    }
-  }, [connected, subscribeToDestination]);
-
-  // Handle incoming WebSocket messages
-  useEffect(() => {
-    if (lastMessage) {
-      try {
-        const data = JSON.parse(lastMessage.content);
-
-        switch (data.type) {
-          case "NEW_MESSAGE":
-            handleNewMessage(data.payload);
-            break;
-          case "CHANNEL_CREATED":
-            handleChannelCreated(data.payload);
-            break;
-          //   case "DIRECT_MESSAGE_CREATED":
-          //     handleDirectMessageCreated(data.payload);
-          //     break;
-          case "USER_STATUS_CHANGED":
-            handleUserStatusChanged(data.payload);
-            break;
-          default:
-            console.log("Unknown message type:", data.type);
+      // Clear previous subscriptions when changing active conversation
+      if (activeConversationId) {
+        if (isActiveChannelConversation) {
+          // Subscribe to the active channel
+          subscribeToDestination(
+            `/topic/channel/${activeConversationId}`,
+            (message) => {
+              handleNewMessage(message as Message);
+            }
+          );
         }
-      } catch (error) {
-        console.error("Error parsing WebSocket message:", error);
       }
+
+      // Subscribe to user-specific messages if we have a current user
+      if (currentUser) {
+        subscribeToDestination(`/queue/user/${currentUser}`, (message) => {
+          handleNewMessage(message as Message);
+        });
+      }
+
+      // Subscribe to channel creation events
+      subscribeToDestination("/topic/channels", (channel) => {
+        handleChannelCreated(channel as Channel);
+      });
+
+      return () => {
+        // Clean up subscriptions
+        if (activeConversationId && isActiveChannelConversation) {
+          unsubscribeFromDestination(`/topic/channel/${activeConversationId}`);
+        }
+        if (currentUser) {
+          unsubscribeFromDestination(`/queue/user/${currentUser}`);
+        }
+        unsubscribeFromDestination("/topic/channels");
+      };
     }
-  }, [lastMessage]);
+  }, [
+    connected,
+    activeConversationId,
+    isActiveChannelConversation,
+    currentUser,
+    subscribeToDestination,
+    unsubscribeFromDestination,
+  ]);
 
   // Create users map for MessageList component
   useEffect(() => {
@@ -143,16 +148,6 @@ export function Messaging() {
   // API calls to fetch data
   const fetchCurrentUser = async () => {
     try {
-      // Get the JWT token from localStorage or wherever you store it
-      const token =
-        "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJtb2UxMTQ3IiwiaWF0IjoxNzQxMjA2NjA1LCJleHAiOjE3NDEyOTMwMDV9.4dSwRt_AmK-cvMvcGY-3c4wEZrNBBH2Ioyelx28LLJ8";
-
-      if (!token) {
-        console.error("No authentication token found");
-        return;
-      }
-
-      // Make the request to the correct endpoint with Authorization header
       const response = await fetch(
         "http://localhost:8080/api/users/currentUser",
         {
@@ -206,8 +201,6 @@ export function Messaging() {
       const data = await handleApiResponse(response);
 
       // Transform DirectMessage data to match DirectMessageDisplay
-      // This assumes the API returns some user information for each DM
-      // You might need to adjust this based on your actual API response
       const dmDisplays: DirectMessageDisplay[] = data.map((dm: any) => ({
         id: dm.channelId || dm.id,
         participant: users.find((u) => u.id === dm.receiverId) || {
@@ -268,8 +261,13 @@ export function Messaging() {
       (isActiveChannelConversation &&
         activeConversationId === message.channelId) ||
       (!isActiveChannelConversation &&
-        !message.channelId &&
-        message.isDirectMessage);
+        message.isDirectMessage &&
+        (message.senderId === currentUser?.id ||
+          directMessages.some(
+            (dm) =>
+              dm.id === activeConversationId &&
+              dm.participant.id === message.senderId
+          )));
 
     if (isActiveConversation) {
       setMessages((prev) => [...prev, message]);
@@ -290,7 +288,7 @@ export function Messaging() {
       } else if (message.isDirectMessage) {
         setDirectMessages((prev) =>
           prev.map((dm) => {
-            // Match DMs by sender ID
+            // Match DMs by sender ID for received messages
             if (dm.participant.id === message.senderId) {
               return {
                 ...dm,
@@ -311,28 +309,6 @@ export function Messaging() {
     };
     setChannels((prev) => [...prev, extendedChannel]);
   };
-
-  //   const handleDirectMessageCreated = (dm: DirectMessage) => {
-  //     // Create a DirectMessageDisplay from the new DirectMessage
-  //     const participant = users.find((u) => u.id === dm.receiverId) || {
-  //       id: dm.receiverId,
-  //       userName: dm.senderUsername,
-  //       status: "OFFLINE",
-  //       email: "",
-  //       password: "",
-  //       channelIds: [],
-  //       directMessageIds: [],
-  //       adminsForWhichChannels: [],
-  //     };
-
-  //     const newDmDisplay: DirectMessageDisplay = {
-  //       id: dm.channelId || `dm_${dm.senderId}_${dm.receiverId}`,
-  //       participant,
-  //       unreadCount: 0,
-  //     };
-
-  //     setDirectMessages((prev) => [...prev, newDmDisplay]);
-  //   };
 
   const handleUserStatusChanged = (user: User) => {
     setUsers((prev) => prev.map((u) => (u.id === user.id ? user : u)));
@@ -358,18 +334,34 @@ export function Messaging() {
   const handleSendMessage = (content: string) => {
     if (!currentUser || !activeConversationId) return;
 
-    const messageData: Partial<Message> = {
-      content,
-      senderId: currentUser.id,
-      timestamp: new Date(),
-      isDirectMessage: !isActiveChannelConversation,
-    };
-
     if (isActiveChannelConversation) {
-      messageData.channelId = activeConversationId;
-    }
+      // Send message to channel
+      const messageData = {
+        content,
+        senderId: currentUser,
+        timestamp: new Date(),
+      };
 
-    sendMessage("/app/chat.sendMessage", JSON.stringify(messageData));
+      sendMessage(
+        `/app/channel/${activeConversationId}`,
+        JSON.stringify(messageData)
+      );
+    } else {
+      // Find recipient ID for direct message
+      const dm = directMessages.find((d) => d.id === activeConversationId);
+      if (dm && dm.participant) {
+        const messageData = {
+          content,
+          senderId: currentUser,
+          timestamp: new Date(),
+        };
+
+        sendMessage(
+          `/app/dm/${dm.participant.id}`,
+          JSON.stringify(messageData)
+        );
+      }
+    }
   };
 
   const handleCreateChannel = async (name: string) => {
@@ -412,7 +404,7 @@ export function Messaging() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            user1Id: currentUser.id, // Send flat key-value pairs
+            user1Id: currentUser,
             user2Id: recipientId,
           }),
         }
@@ -433,10 +425,27 @@ export function Messaging() {
   };
 
   const handleConversationSelect = (id: string, isChannel: boolean) => {
+    // Unsubscribe from previous channel if it was a channel
+    if (activeConversationId && isActiveChannelConversation) {
+      unsubscribeFromDestination(
+        `http://localhost:8080/topic/channel/$67c5609ae1dfdc76e1833da1`
+      );
+    }
+
     setActiveConversationId(id);
     setIsActiveChannelConversation(isChannel);
     setMessages([]);
     fetchMessages(id, isChannel);
+
+    // Subscribe to the new channel if it's a channel
+    if (isChannel && connected) {
+      subscribeToDestination(
+        `http://localhost:8080/topic/channel/67c560aee1dfdc76e1833da2`,
+        (message) => {
+          handleNewMessage(message as Message);
+        }
+      );
+    }
 
     // Reset unread count for the selected conversation
     if (isChannel) {
@@ -486,6 +495,12 @@ export function Messaging() {
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
+      {wsError && (
+        <div className="absolute top-0 left-0 right-0 bg-red-500 text-white p-2 text-center">
+          WebSocket Error: {wsError}
+        </div>
+      )}
+
       <Sidebar
         channels={channels}
         directMessages={directMessages}
@@ -518,7 +533,10 @@ export function Messaging() {
               currentUser={currentUser}
               users={usersMap}
             />
-            <MessageInput onSendMessageAction={handleSendMessage} />
+            <MessageInput
+              onSendMessageAction={handleSendMessage}
+              // disabled={!connected}
+            />
           </>
         )}
       </div>
