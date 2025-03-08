@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import SockJS from "sockjs-client";
-import { Client, Stomp } from "@stomp/stompjs";
+import { Client, Stomp, StompSubscription } from "@stomp/stompjs";
 
 const WS_URL = "http://localhost:8080/ws";
 const token =
@@ -10,28 +10,40 @@ export function useWebSocket() {
   const [stompClient, setStompClient] = useState<Client | null>(null);
   const [connected, setConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Track active subscriptions to prevent duplicates and enable proper cleanup
+  const subscriptionsRef = useRef<Map<string, StompSubscription>>(new Map());
 
   useEffect(() => {
     const socket = new SockJS(WS_URL);
     const client = Stomp.over(socket);
 
+    // Disable debug logs in production
+    client.debug = () => {};
+
     client.connect(
       { Authorization: `Bearer ${token}` },
       () => {
-      console.log("Connected to WebSocket");
-      setStompClient(client);
-      setConnected(true);
+        console.log("Connected to WebSocket");
+        setStompClient(client);
+        setConnected(true);
       },
       (err: Error) => {
-      console.error("WebSocket connection error", err);
-      setError("WebSocket connection failed");
-      },
+        console.error("WebSocket connection error", err);
+        setError("WebSocket connection failed");
+      }
     );
 
     return () => {
-      if (client) client.disconnect(() => {
-        console.log("Disconnected from WebSocket");
+      // Clean up all subscriptions on unmount
+      subscriptionsRef.current.forEach((subscription) => {
+        subscription.unsubscribe();
       });
+
+      if (client) {
+        client.disconnect(() => {
+          console.log("Disconnected from WebSocket");
+        });
+      }
     };
   }, []);
 
@@ -42,7 +54,7 @@ export function useWebSocket() {
         headers: {
           Authorization: `Bearer ${token}`,
         },
-        body: message
+        body: message,
       });
     } else {
       console.error("Cannot send message: WebSocket not connected");
@@ -54,15 +66,33 @@ export function useWebSocket() {
     callback: (message: any) => void
   ) => {
     if (stompClient && connected) {
-      stompClient.subscribe(destination, (message) => {
-        callback(JSON.parse(message.body));
-      });
+      // Check if we're already subscribed to this destination
+      if (!subscriptionsRef.current.has(destination)) {
+        console.log(`Subscribing to: ${destination}`);
+        const subscription = stompClient.subscribe(destination, (message) => {
+          try {
+            const parsedBody = JSON.parse(message.body);
+            callback(parsedBody);
+          } catch (e) {
+            console.error("Error parsing message:", e);
+          }
+        });
+
+        // Store the subscription
+        subscriptionsRef.current.set(destination, subscription);
+      }
+    } else {
+      console.log(`Will subscribe to ${destination} when connected`);
     }
   };
 
   const unsubscribeFromDestination = (destination: string) => {
-    if (stompClient && connected) {
-      stompClient.unsubscribe(destination);
+    const subscription = subscriptionsRef.current.get(destination);
+
+    if (subscription) {
+      console.log(`Unsubscribing from: ${destination}`);
+      subscription.unsubscribe();
+      subscriptionsRef.current.delete(destination);
     }
   };
 

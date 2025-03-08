@@ -16,6 +16,7 @@ export interface Message {
   timestamp: Date;
   isDirectMessage?: boolean;
   senderId: string;
+  receiverId?: string;
 }
 
 export interface Channel {

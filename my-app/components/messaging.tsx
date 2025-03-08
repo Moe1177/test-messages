@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { MessageList } from "./message-list";
 import { MessageInput } from "./message-input";
 import { Sidebar } from "./sidebar";
@@ -61,9 +61,6 @@ export function Messaging() {
 
   // Initialize connection and fetch initial data
   useEffect(() => {
-    // Store token in localStorage for the WebSocket hook to use
-    localStorage.setItem("token", token);
-
      if (!connected) {
        console.log("Connecting to WebSocket...");
      }
@@ -76,55 +73,45 @@ export function Messaging() {
   }, []);
 
   // Set up WebSocket subscriptions based on current state
-  useEffect(() => {
-    if (connected) {
-      // Clear previous subscriptions when changing active conversation
-      if (activeConversationId) {
-        if (isActiveChannelConversation) {
-          // Subscribe to the active channel
-          subscribeToDestination(
-            `http://localhost:8080/topic/channel/${activeConversationId}`,
-            (message) => {
-              handleNewMessage(message as Message);
-            }
-          );
-        }
-      }
+ useEffect(() => {
+   if (connected) {
+     console.log("Setting up WebSocket subscriptions");
 
-      // Subscribe to user-specific messages for direct messages
-      subscribeToDestination(
-        `http://localhost:8080/user/queue/${userId}`,
-        (message) => {
-          handleNewMessage(message as Message);
-        }
-      );
+     // Always subscribe to user-specific messages for direct messages
+     subscribeToDestination(
+       `http://localhost:8080/user/queue/${userId}`,
+       (message) => {
+         console.log("Received user message:", message);
+         handleNewMessage(message as Message);
+       }
+     );
 
-      // Subscribe to channel creation events
-      subscribeToDestination(
-        "http://localhost:8080/topic/channels",
-        (channel) => {
-          handleChannelCreated(channel as Channel);
-        }
-      );
+     // Subscribe to channel creation events
+     subscribeToDestination(
+       "http://localhost:8080/topic/channels",
+       (channel) => {
+         console.log("New channel created:", channel);
+         handleChannelCreated(channel as Channel);
+       }
+     );
 
-      return () => {
-        // Clean up subscriptions
-        if (activeConversationId && isActiveChannelConversation) {
-          unsubscribeFromDestination(
-            `http://localhost:8080/topic/channel/${activeConversationId}`
-          );
-        }
-        unsubscribeFromDestination(
-          `http://localhost:8080/user/queue/${userId}`
-        );
-        unsubscribeFromDestination("http://localhost:8080/topic/channels");
-      };
-    }
-  }, [
-    connected,
-    activeConversationId,
-    isActiveChannelConversation,
-  ]);
+     // Only subscribe to the active channel if there is one
+     if (activeConversationId && isActiveChannelConversation) {
+       console.log(`Subscribing to active channel: ${activeConversationId}`);
+       subscribeToDestination(
+         `http://localhost:8080/topic/channel/${activeConversationId}`,
+         (message) => {
+           console.log("Received channel message:", message);
+           handleNewMessage(message as Message);
+         }
+       );
+     }
+
+     return () => {
+       // Cleanup will be handled by the useWebSocket hook
+     };
+   }
+ }, [connected, activeConversationId, isActiveChannelConversation]);
 
   // Create users map for MessageList component
   useEffect(() => {
@@ -307,50 +294,97 @@ export function Messaging() {
   };
 
   // WebSocket message handlers
-  const handleNewMessage = (message: Message) => {
-    // Check if message belongs to active conversation
-    const isActiveConversation =
-      (isActiveChannelConversation &&
-        activeConversationId === message.channelId) ||
-      (!isActiveChannelConversation &&
-        message.isDirectMessage &&
-        (message.senderId === userId ||
-          directMessages.some(
-            (dm) =>
-              dm.id === activeConversationId &&
-              dm.participant.id === message.senderId
-          )));
+  const handleNewMessage = useCallback(
+    (message: Message) => {
+      setMessages((prevMessages) => {
+        // Check if this message is already in our list to prevent duplicates
+        const messageExists = prevMessages.some(
+          (m) => m.id === message.id && message.id !== ""
+        );
 
-    if (isActiveConversation) {
-      setMessages((prev) => [...prev, message]);
-    } else {
+        if (messageExists) {
+          return prevMessages;
+        }
+
+        // Normalize timestamp to ensure it's a Date object
+        const normalizedMessage = {
+          ...message,
+          timestamp:
+            message.timestamp instanceof Date
+              ? message.timestamp
+              : new Date(message.timestamp),
+        };
+
+        // Check if this message belongs to the active conversation
+        const belongsToActiveConversation =
+          (isActiveChannelConversation &&
+            activeConversationId === message.channelId) ||
+          (!isActiveChannelConversation &&
+            message.isDirectMessage &&
+            ((message.senderId === userId &&
+              message.receiverId === getActiveDirectMessage()?.receiverId) ||
+              (message.senderId === getActiveDirectMessage()?.receiverId &&
+                message.receiverId === userId)));
+
+        if (belongsToActiveConversation) {
+          console.log(
+            "Adding message to active conversation:",
+            normalizedMessage
+          );
+          return [...prevMessages, normalizedMessage];
+        }
+
+        return prevMessages;
+      });
+
       // Update unread count for non-active conversations
-      if (message.channelId && !message.isDirectMessage) {
-        setChannels((prev) =>
-          prev.map((channel) => {
-            if (channel.id === message.channelId) {
-              return {
-                ...channel,
-                unreadCount: (channel.unreadCount || 0) + 1,
-              };
-            }
-            return channel;
-          })
-        );
-      } else if (message.isDirectMessage) {
-        setDirectMessages((prev) =>
-          prev.map((dm) => {
-            // Match DMs by sender ID for received messages
-            if (dm.participant.id === message.senderId) {
-              return {
-                ...dm,
-                unreadCount: (dm.unreadCount || 0) + 1,
-              };
-            }
-            return dm;
-          })
-        );
+      if (!isMessageForActiveConversation(message)) {
+        if (message.channelId && !message.isDirectMessage) {
+          setChannels((prev) =>
+            prev.map((channel) => {
+              if (channel.id === message.channelId) {
+                return {
+                  ...channel,
+                  unreadCount: (channel.unreadCount || 0) + 1,
+                };
+              }
+              return channel;
+            })
+          );
+        } else if (message.isDirectMessage) {
+          setDirectMessages((prev) =>
+            prev.map((dm) => {
+              // Match DMs by sender ID for received messages
+              if (dm.participant.id === message.senderId) {
+                return {
+                  ...dm,
+                  unreadCount: (dm.unreadCount || 0) + 1,
+                };
+              }
+              return dm;
+            })
+          );
+        }
       }
+    },
+    [activeConversationId, isActiveChannelConversation, userId]
+  );
+
+  const isMessageForActiveConversation = (message: Message): boolean => {
+    if (isActiveChannelConversation) {
+      return activeConversationId === message.channelId;
+    } else {
+      if (!message.isDirectMessage) return false;
+
+      const activeDM = getActiveDirectMessage();
+      if (!activeDM) return false;
+
+      return (
+        (message.senderId === userId &&
+          message.receiverId === activeDM.receiverId) ||
+        (message.senderId === activeDM.receiverId &&
+          message.receiverId === userId)
+      );
     }
   };
 
@@ -402,6 +436,15 @@ export function Messaging() {
 
     // Send the message to the channel destination
     sendMessage(`/app/channel/${channelId}`, JSON.stringify(messageData));
+
+    // Optimistically add the message to the UI
+    const tempId = `temp-${Date.now()}`;
+    const optimisticMessage: Message = {
+      ...messageData,
+      id: tempId,
+    };
+
+    setMessages((prev) => [...prev, optimisticMessage]);
   };
 
   // Function to send a direct message
@@ -428,6 +471,15 @@ export function Messaging() {
 
     // Send the message to the direct message destination
     sendMessage(`/app/dm/${recipientId}`, JSON.stringify(messageData));
+
+    // Optimistically add the message to the UI
+    const tempId = `temp-${new Date()}`;
+    const optimisticMessage: Message = {
+      ...messageData,
+      id: tempId,
+    };
+
+    setMessages((prev) => [...prev, optimisticMessage]);
   };
 
   const handleCreateChannel = async (name: string) => {
@@ -523,6 +575,7 @@ export function Messaging() {
       subscribeToDestination(
         `http://localhost:8080/topic/channel/${id}`,
         (message) => {
+          console.log("Received message in newly selected channel:", message);
           handleNewMessage(message as Message);
         }
       );
