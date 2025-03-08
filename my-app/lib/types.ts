@@ -28,7 +28,7 @@ export interface Channel {
   directMessageMembers: string[];
 }
 
-export interface DirectMessage {
+export interface WebSocketMessage {
   id: string
   content: string;
   senderId: string;

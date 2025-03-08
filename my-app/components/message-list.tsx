@@ -52,11 +52,20 @@ export function MessageList({
   // Group messages by date
   const groupedMessages: { [key: string]: Message[] } = {};
   messages.forEach((message) => {
-    const dateKey = formatDate(message.timestamp);
+    // Ensure timestamp is a Date object
+    const timestamp =
+      message.timestamp instanceof Date
+        ? message.timestamp
+        : new Date(message.timestamp);
+
+    const dateKey = formatDate(timestamp);
     if (!groupedMessages[dateKey]) {
       groupedMessages[dateKey] = [];
     }
-    groupedMessages[dateKey].push(message);
+    groupedMessages[dateKey].push({
+      ...message,
+      timestamp: timestamp, // Ensure timestamp is a Date
+    });
   });
 
   return (
@@ -72,23 +81,31 @@ export function MessageList({
           </div>
 
           {dateMessages.map((message, index) => {
-            const isCurrentUser = message.senderId === currentUser?.id;
+            const isCurrentUser =
+              currentUser && message.senderId === currentUser.id;
             const showAvatar =
               index === 0 ||
               dateMessages[index - 1].senderId !== message.senderId;
 
-            const sender = users[message.senderId] || { userName: "Unknown" };
+            const sender = users[message.senderId] || {
+              username: "Unknown",
+              id: message.senderId,
+            };
 
             return (
               <div
-                key={message.id}
+                key={message.id || index} // Fallback to index if id is not available
                 className={`flex items-start mb-4 ${
                   isCurrentUser ? "justify-end" : ""
                 }`}
               >
                 {!isCurrentUser && showAvatar && (
                   <Avatar className="h-8 w-8 mr-2 mt-0.5">
-                    <AvatarFallback>{sender.username.charAt(0)}</AvatarFallback>
+                    <AvatarFallback>
+                      {sender.username
+                        ? sender.username.charAt(0).toUpperCase()
+                        : "U"}
+                    </AvatarFallback>
                   </Avatar>
                 )}
 
@@ -102,7 +119,7 @@ export function MessageList({
                   {showAvatar && !isCurrentUser && (
                     <div className="flex items-center mb-1">
                       <span className="font-medium text-sm">
-                        {sender.username}
+                        {sender.username || "Unknown User"}
                       </span>
                       <span className="text-xs text-muted-foreground ml-2">
                         {formatTime(message.timestamp)}
@@ -132,7 +149,7 @@ export function MessageList({
                 {isCurrentUser && showAvatar && (
                   <Avatar className="h-8 w-8 ml-2 mt-0.5 order-3">
                     <AvatarFallback>
-                      {currentUser?.username.charAt(0)}
+                      {currentUser?.username.charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                 )}

@@ -1,4 +1,4 @@
-import type { User, Channel, DirectMessage } from "@/lib/types";
+import type { User, Channel, WebSocketMessage } from "@/lib/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
