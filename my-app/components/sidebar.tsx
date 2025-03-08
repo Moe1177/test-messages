@@ -1,3 +1,4 @@
+import React from "react";
 import type { User, Channel } from "@/lib/types";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
