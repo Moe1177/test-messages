@@ -44,7 +44,6 @@ export function Messaging() {
   const [selectedChannel, setSelectedChannel] = useState<Channel | null>(null);
 
   // Hard-coded values as requested
-  const channelId = "67c4ddbd9ef42e1c0eb7c343";
   const userId = "67c5071c2f3f3c63306870b2";
   const otherUserId = "67c50a6da4d538066589c299";
   const token =
