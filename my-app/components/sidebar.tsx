@@ -1,5 +1,5 @@
-import type { User, Channel, WebSocketMessage } from "@/lib/types";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import type { User, Channel } from "@/lib/types";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Hash, Plus, Settings, MessageSquare } from "lucide-react";

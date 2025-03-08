@@ -1,4 +1,4 @@
-import type { Channel, DirectMessage, User } from "@/lib/types";
+import type { Channel, User } from "@/lib/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Settings, Hash } from "lucide-react";

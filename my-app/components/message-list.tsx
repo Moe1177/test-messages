@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import type { Message, User } from "@/lib/types";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface MessageListProps {
