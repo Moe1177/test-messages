@@ -315,8 +315,17 @@ export function Messaging() {
         },
       });
       const data = await handleApiResponse(response);
+
+      setMessages((prevMessages) => {
+        const existingIds = new Set(prevMessages.map((msg) => msg.id));
+        const uniqueMessages = data.filter(
+          (msg: Message) => !existingIds.has(msg.id)
+        );
+
+        return [...prevMessages, ...uniqueMessages];
+      });
       console.log(`Fetched messages for channel ${conversationId}:`, data);
-      setMessages(data);
+      // setMessages(data);
     } catch (error) {
       console.error(
         `Error fetching messages for ${
@@ -339,6 +348,8 @@ export function Messaging() {
         if (messageExists) {
           return prevMessages;
         }
+
+         console.log("📩 New message received via WebSocket:", message);
 
         // Normalize timestamp to ensure it's a Date object
         const normalizedMessage = {

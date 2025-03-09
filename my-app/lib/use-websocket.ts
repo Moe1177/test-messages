@@ -117,8 +117,9 @@ export function useWebSocket() {
           headers: {
             Authorization: `Bearer ${token}`,
           },
-          body: message,
+          body: JSON.stringify(message),
         });
+        console.log(`Sent message to ${destination}:`, message);
         return true;
       } catch (error) {
         console.error("Error sending message:", error);
