@@ -45,6 +45,8 @@ export function Messaging() {
 
   // Hard-coded values as requested
   const userId = "67c5071c2f3f3c63306870b2";
+
+  const userId2 = "67cb641d1ab64f63672e5ad2";
   const otherUserId = "67c50a6da4d538066589c299";
   const token =
     "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJtb2UxMTQ3IiwiaWF0IjoxNzQxNDk2MDU1LCJleHAiOjE3NDE1ODI0NTV9.lahoXrfLRy78w2P7Aj7hNp60Wtt7n5nkzjTrwJaDSHM";
@@ -77,28 +79,22 @@ export function Messaging() {
       console.log("Setting up WebSocket subscriptions");
 
       // Always subscribe to user-specific messages for direct messages
-      subscribeToDestination(
-        `https://soen341-deployement-latest.onrender.com/queue/user/${userId}`,
-        (message) => {
-          console.log("Received user message:", message);
-          handleNewMessage(message as Message);
-        }
-      );
+      subscribeToDestination(`/queue/user/${userId}`, (message) => {
+        console.log("Received user message:", message);
+        handleNewMessage(message as Message);
+      });
 
       // Subscribe to channel creation events
-      subscribeToDestination(
-        "https://soen341-deployement-latest.onrender.com/topic/channels",
-        (channel) => {
-          console.log("New channel created:", channel);
-          handleChannelCreated(channel as Channel);
-        }
-      );
+      subscribeToDestination("/topic/channels", (channel) => {
+        console.log("New channel created:", channel);
+        handleChannelCreated(channel as Channel);
+      });
 
       // Only subscribe to the active channel if there is one
       if (activeConversationId && isActiveChannelConversation) {
         console.log(`Subscribing to active channel: ${activeConversationId}`);
         subscribeToDestination(
-          `https://soen341-deployement-latest.onrender.com/topic/channel/${activeConversationId}`,
+          `/topic/channel/${activeConversationId}`,
           (message) => {
             console.log("Received channel message:", message);
             handleNewMessage(message as Message);
@@ -206,7 +202,14 @@ export function Messaging() {
   const fetchChannels = async () => {
     try {
       const response = await fetch(
-        `https://soen341-deployement-latest.onrender.com/api/channels/user/${userId}`
+        `https://soen341-deployement-latest.onrender.com/api/channels/user/${userId}`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
       );
       const data = await handleApiResponse(response);
 
@@ -233,7 +236,14 @@ export function Messaging() {
   const fetchDirectMessages = async () => {
     try {
       const response = await fetch(
-        `https://soen341-deployement-latest.onrender.com/api/channels/direct-message/${userId}`
+        `https://soen341-deployement-latest.onrender.com/api/channels/direct-message/${userId}`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
       );
       const data = await handleApiResponse(response);
 
@@ -295,7 +305,14 @@ export function Messaging() {
   const fetchUsers = async () => {
     try {
       const response = await fetch(
-        "https://soen341-deployement-latest.onrender.com/api/users"
+        "https://soen341-deployement-latest.onrender.com/api/users",
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
       );
       const data = await handleApiResponse(response);
       setUsers(data);
@@ -316,16 +333,17 @@ export function Messaging() {
       });
       const data = await handleApiResponse(response);
 
-      setMessages((prevMessages) => {
-        const existingIds = new Set(prevMessages.map((msg) => msg.id));
-        const uniqueMessages = data.filter(
-          (msg: Message) => !existingIds.has(msg.id)
-        );
+      // Convert timestamps to Date objects
+      const messagesWithDateObjects = data.map((msg: any) => ({
+        ...msg,
+        timestamp: new Date(msg.timestamp),
+      }));
 
-        return [...prevMessages, ...uniqueMessages];
-      });
-      console.log(`Fetched messages for channel ${conversationId}:`, data);
-      // setMessages(data);
+      setMessages(messagesWithDateObjects);
+      console.log(
+        `Fetched messages for channel ${conversationId}:`,
+        messagesWithDateObjects
+      );
     } catch (error) {
       console.error(
         `Error fetching messages for ${
@@ -349,7 +367,7 @@ export function Messaging() {
           return prevMessages;
         }
 
-         console.log("📩 New message received via WebSocket:", message);
+        console.log("📩 New message received via WebSocket:", message);
 
         // Normalize timestamp to ensure it's a Date object
         const normalizedMessage = {
@@ -462,7 +480,7 @@ export function Messaging() {
         // Find recipient ID for direct message
         const dm = directMessages.find((d) => d.id === activeConversationId);
         if (dm && dm.participant) {
-          sendDirectMessage(dm.participant.id, content);
+          sendDirectMessage(userId2, content);
         } else {
           console.error("Could not find participant for direct message");
         }

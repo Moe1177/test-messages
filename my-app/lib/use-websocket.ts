@@ -35,14 +35,13 @@ export function useWebSocket() {
         stompClientRef.current.deactivate();
       }
 
-      // Create a new STOMP client directly without using Stomp.over
+      // Create a new STOMP client
       const client = new Client({
-        // Provide a WebSocket factory function instead of a direct instance
         webSocketFactory: () => new SockJS(WS_URL),
         connectHeaders: {
           Authorization: `Bearer ${token}`,
         },
-        debug: () => {}, // Disable debug logs in production
+        debug: (msg) => console.debug(msg), // Enable for debugging, disable in production
         reconnectDelay: RECONNECT_DELAY,
       });
 
@@ -70,8 +69,6 @@ export function useWebSocket() {
       client.onWebSocketClose = () => {
         console.log("WebSocket connection closed");
         setConnected(false);
-
-        // The client will handle reconnection automatically based on reconnectDelay
         setReconnectAttempts((prev) => prev + 1);
       };
 
@@ -79,6 +76,12 @@ export function useWebSocket() {
     } catch (error) {
       console.error("Error connecting to WebSocket:", error);
       setError("Failed to establish WebSocket connection");
+
+      // Schedule a reconnection attempt
+      setTimeout(() => {
+        setReconnectAttempts((prev) => prev + 1);
+        connectWebSocket();
+      }, RECONNECT_DELAY);
     }
   }, [reconnectAttempts]);
 
@@ -89,7 +92,11 @@ export function useWebSocket() {
     return () => {
       // Clean up subscriptions
       subscriptionsRef.current.forEach((subscription) => {
-        subscription.unsubscribe();
+        try {
+          subscription.unsubscribe();
+        } catch (e) {
+          console.error("Error unsubscribing:", e);
+        }
       });
 
       // Disconnect client
@@ -99,7 +106,11 @@ export function useWebSocket() {
         setStompClient(null);
         setConnected(false);
 
-        client.deactivate();
+        try {
+          client.deactivate();
+        } catch (e) {
+          console.error("Error deactivating client:", e);
+        }
       }
     };
   }, [connectWebSocket]);
@@ -116,6 +127,7 @@ export function useWebSocket() {
           destination: destination,
           headers: {
             Authorization: `Bearer ${token}`,
+            "Content-type": "application/json",
           },
           body: JSON.stringify(message),
         });
@@ -150,7 +162,12 @@ export function useWebSocket() {
                 callback(parsedBody);
               } catch (e) {
                 console.error("Error parsing message:", e);
+                // If parsing fails, pass the raw body
+                callback(message.body);
               }
+            },
+            {
+              Authorization: `Bearer ${token}`,
             }
           );
 
