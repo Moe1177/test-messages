@@ -78,7 +78,7 @@ export function Messaging() {
 
       // Always subscribe to user-specific messages for direct messages
       subscribeToDestination(
-        `https://soen341-deployement-latest.onrender.com/user/queue/${userId}`,
+        `https://soen341-deployement-latest.onrender.com/queue/user/${userId}`,
         (message) => {
           console.log("Received user message:", message);
           handleNewMessage(message as Message);
