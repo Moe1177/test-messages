@@ -47,7 +47,7 @@ export function Messaging() {
   const userId = "67c5071c2f3f3c63306870b2";
   const otherUserId = "67c50a6da4d538066589c299";
   const token =
-    "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJtb2UxMTQ3IiwiaWF0IjoxNzQxMzY1MDIzLCJleHAiOjE3NDE0NTE0MjN9.F6vr4p-MWbkbVD5KY0LewL7-mLPKTNCQY6ih1IvQe10";
+    "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJtb2UxMTQ3IiwiaWF0IjoxNzQxNDk2MDU1LCJleHAiOjE3NDE1ODI0NTV9.lahoXrfLRy78w2P7Aj7hNp60Wtt7n5nkzjTrwJaDSHM";
 
   // WebSocket connection and handlers
   const {
@@ -60,10 +60,10 @@ export function Messaging() {
 
   // Initialize connection and fetch initial data
   useEffect(() => {
-     if (!connected) {
-       console.log("Connecting to WebSocket...");
-     }
-    
+    if (!connected) {
+      console.log("Connecting to WebSocket...");
+    }
+
     // Fetch initial data
     fetchCurrentUser();
     fetchChannels();
@@ -72,45 +72,45 @@ export function Messaging() {
   }, []);
 
   // Set up WebSocket subscriptions based on current state
- useEffect(() => {
-   if (connected) {
-     console.log("Setting up WebSocket subscriptions");
+  useEffect(() => {
+    if (connected) {
+      console.log("Setting up WebSocket subscriptions");
 
-     // Always subscribe to user-specific messages for direct messages
-     subscribeToDestination(
-       `http://localhost:8080/user/queue/${userId}`,
-       (message) => {
-         console.log("Received user message:", message);
-         handleNewMessage(message as Message);
-       }
-     );
+      // Always subscribe to user-specific messages for direct messages
+      subscribeToDestination(
+        `https://soen341-deployement-latest.onrender.com/user/queue/${userId}`,
+        (message) => {
+          console.log("Received user message:", message);
+          handleNewMessage(message as Message);
+        }
+      );
 
-     // Subscribe to channel creation events
-     subscribeToDestination(
-       "http://localhost:8080/topic/channels",
-       (channel) => {
-         console.log("New channel created:", channel);
-         handleChannelCreated(channel as Channel);
-       }
-     );
+      // Subscribe to channel creation events
+      subscribeToDestination(
+        "https://soen341-deployement-latest.onrender.com/topic/channels",
+        (channel) => {
+          console.log("New channel created:", channel);
+          handleChannelCreated(channel as Channel);
+        }
+      );
 
-     // Only subscribe to the active channel if there is one
-     if (activeConversationId && isActiveChannelConversation) {
-       console.log(`Subscribing to active channel: ${activeConversationId}`);
-       subscribeToDestination(
-         `http://localhost:8080/topic/channel/${activeConversationId}`,
-         (message) => {
-           console.log("Received channel message:", message);
-           handleNewMessage(message as Message);
-         }
-       );
-     }
+      // Only subscribe to the active channel if there is one
+      if (activeConversationId && isActiveChannelConversation) {
+        console.log(`Subscribing to active channel: ${activeConversationId}`);
+        subscribeToDestination(
+          `https://soen341-deployement-latest.onrender.com/topic/channel/${activeConversationId}`,
+          (message) => {
+            console.log("Received channel message:", message);
+            handleNewMessage(message as Message);
+          }
+        );
+      }
 
-     return () => {
-       // Cleanup will be handled by the useWebSocket hook
-     };
-   }
- }, [connected, activeConversationId, isActiveChannelConversation]);
+      return () => {
+        // Cleanup will be handled by the useWebSocket hook
+      };
+    }
+  }, [connected, activeConversationId, isActiveChannelConversation]);
 
   // Create users map for MessageList component
   useEffect(() => {
@@ -174,7 +174,7 @@ export function Messaging() {
 
       // Make the request to the correct endpoint with Authorization header
       const response = await fetch(
-        "http://localhost:8080/api/users/currentUser",
+        "https://soen341-deployement-latest.onrender.com/api/users/currentUser",
         {
           method: "GET",
           headers: {
@@ -206,7 +206,7 @@ export function Messaging() {
   const fetchChannels = async () => {
     try {
       const response = await fetch(
-        `http://localhost:8080/api/channels/user/${userId}`
+        `https://soen341-deployement-latest.onrender.com/api/channels/user/${userId}`
       );
       const data = await handleApiResponse(response);
 
@@ -233,7 +233,7 @@ export function Messaging() {
   const fetchDirectMessages = async () => {
     try {
       const response = await fetch(
-        `http://localhost:8080/api/channels/direct-message/${userId}`
+        `https://soen341-deployement-latest.onrender.com/api/channels/direct-message/${userId}`
       );
       const data = await handleApiResponse(response);
 
@@ -294,7 +294,9 @@ export function Messaging() {
 
   const fetchUsers = async () => {
     try {
-      const response = await fetch("http://localhost:8080/api/users");
+      const response = await fetch(
+        "https://soen341-deployement-latest.onrender.com/api/users"
+      );
       const data = await handleApiResponse(response);
       setUsers(data);
     } catch (error) {
@@ -304,7 +306,7 @@ export function Messaging() {
 
   const fetchMessages = async (conversationId: string, isChannel: boolean) => {
     try {
-      const endpoint = `http://localhost:8080/api/messages/channel/${conversationId}`;
+      const endpoint = `https://soen341-deployement-latest.onrender.com/api/messages/channel/${conversationId}`;
 
       const response = await fetch(endpoint, {
         headers: {
@@ -429,35 +431,35 @@ export function Messaging() {
   };
 
   // User actions
- const handleSendMessage = (content: string) => {
-   if (!activeConversationId) {
-     console.error("No active conversation selected");
-     return;
-   }
+  const handleSendMessage = (content: string) => {
+    if (!activeConversationId) {
+      console.error("No active conversation selected");
+      return;
+    }
 
-   if (!connected) {
-     console.error("WebSocket not connected");
-     alert("Not connected to chat server. Please wait or refresh the page.");
-     return;
-   }
+    if (!connected) {
+      console.error("WebSocket not connected");
+      alert("Not connected to chat server. Please wait or refresh the page.");
+      return;
+    }
 
-   try {
-     if (isActiveChannelConversation) {
-       // Send message to channel
-       sendChannelMessage(activeConversationId, content);
-     } else {
-       // Find recipient ID for direct message
-       const dm = directMessages.find((d) => d.id === activeConversationId);
-       if (dm && dm.participant) {
-         sendDirectMessage(dm.participant.id, content);
-       } else {
-         console.error("Could not find participant for direct message");
-       }
-     }
-   } catch (error) {
-     console.error("Error in handleSendMessage:", error);
-   }
- };
+    try {
+      if (isActiveChannelConversation) {
+        // Send message to channel
+        sendChannelMessage(activeConversationId, content);
+      } else {
+        // Find recipient ID for direct message
+        const dm = directMessages.find((d) => d.id === activeConversationId);
+        if (dm && dm.participant) {
+          sendDirectMessage(dm.participant.id, content);
+        } else {
+          console.error("Could not find participant for direct message");
+        }
+      }
+    } catch (error) {
+      console.error("Error in handleSendMessage:", error);
+    }
+  };
 
   // Function to send a message to a channel
   const sendChannelMessage = (channelId: string, content: string) => {
@@ -547,7 +549,7 @@ export function Messaging() {
   const handleCreateChannel = async (name: string) => {
     try {
       const response = await fetch(
-        `http://localhost:8080/api/channels/create-channel?userId=${userId}`,
+        `https://soen341-deployement-latest.onrender.com/api/channels/create-channel?userId=${userId}`,
         {
           method: "POST",
           headers: {
@@ -569,62 +571,62 @@ export function Messaging() {
     setShowCreateChannel(false);
   };
 
-const handleCreateDirectMessage = async (recipientId: string) => {
-  try {
-    const response = await fetch(
-      `http://localhost:8080/api/channels/direct-message`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
+  const handleCreateDirectMessage = async (recipientId: string) => {
+    try {
+      const response = await fetch(
+        `https://soen341-deployement-latest.onrender.com/api/channels/direct-message`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            user1Id: userId, // Using hardcoded userId
+            user2Id: recipientId,
+          }),
+        }
+      );
+
+      const data = await handleApiResponse(response);
+
+      // Find recipient user info
+      const recipient = users.find((user) => user.id === recipientId);
+
+      // Add to direct messages list
+      const newDM: DirectMessageDisplay = {
+        id: data.id,
+        participant: recipient || {
+          id: recipientId,
+          username: "Unknown User",
+          email: "",
+          password: "",
+          channelIds: [],
+          directMessageIds: [],
+          adminsForWhichChannels: [],
+          status: "OFFLINE",
         },
-        body: JSON.stringify({
-          user1Id: userId, // Using hardcoded userId
-          user2Id: recipientId,
-        }),
-      }
-    );
+        unreadCount: 0,
+      };
 
-    const data = await handleApiResponse(response);
+      setDirectMessages((prev) => [...prev, newDM]);
 
-    // Find recipient user info
-    const recipient = users.find((user) => user.id === recipientId);
+      // Important: Select the new DM conversation after creating it
+      // This ensures proper subscription setup before sending messages
+      handleConversationSelect(data.id, false);
 
-    // Add to direct messages list
-    const newDM: DirectMessageDisplay = {
-      id: data.id,
-      participant: recipient || {
-        id: recipientId,
-        username: "Unknown User",
-        email: "",
-        password: "",
-        channelIds: [],
-        directMessageIds: [],
-        adminsForWhichChannels: [],
-        status: "OFFLINE",
-      },
-      unreadCount: 0,
-    };
+      // Added console log for debugging
+      console.log(`Created new DM channel with ID: ${data.id}`);
 
-    setDirectMessages((prev) => [...prev, newDM]);
-
-    // Important: Select the new DM conversation after creating it
-    // This ensures proper subscription setup before sending messages
-    handleConversationSelect(data.id, false);
-
-    // Added console log for debugging
-    console.log(`Created new DM channel with ID: ${data.id}`);
-
-    // Return the new DM ID for potential use
-    return data.id;
-  } catch (error) {
-    console.error("Error creating direct message:", error);
-    return null;
-  } finally {
-    setShowCreateDM(false);
-  }
-};
+      // Return the new DM ID for potential use
+      return data.id;
+    } catch (error) {
+      console.error("Error creating direct message:", error);
+      return null;
+    } finally {
+      setShowCreateDM(false);
+    }
+  };
 
   const handleViewChannelInvite = (channel: Channel) => {
     setSelectedChannel(channel);
@@ -635,7 +637,7 @@ const handleCreateDirectMessage = async (recipientId: string) => {
     // Unsubscribe from previous channel if it was a channel
     if (activeConversationId && isActiveChannelConversation) {
       unsubscribeFromDestination(
-        `http://localhost:8080/topic/channel/${activeConversationId}`
+        `https://soen341-deployement-latest.onrender.com/topic/channel/${activeConversationId}`
       );
     }
 
@@ -647,7 +649,7 @@ const handleCreateDirectMessage = async (recipientId: string) => {
     // Subscribe to the new channel if it's a channel
     if (isChannel && connected) {
       subscribeToDestination(
-        `http://localhost:8080/topic/channel/${id}`,
+        `https://soen341-deployement-latest.onrender.com/topic/channel/${id}`,
         (message) => {
           console.log("Received message in newly selected channel:", message);
           handleNewMessage(message as Message);

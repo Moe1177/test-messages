@@ -2,9 +2,9 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import SockJS from "sockjs-client";
 import { Client, Stomp, StompSubscription } from "@stomp/stompjs";
 
-const WS_URL = "http://localhost:8080/ws";
+const WS_URL = "https://soen341-deployement-latest.onrender.com/ws";
 const token =
-  "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJtb2UxMTQ3IiwiaWF0IjoxNzQxMzY1MDIzLCJleHAiOjE3NDE0NTE0MjN9.F6vr4p-MWbkbVD5KY0LewL7-mLPKTNCQY6ih1IvQe10";
+  "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJtb2UxMTQ3IiwiaWF0IjoxNzQxNDk2MDU1LCJleHAiOjE3NDE1ODI0NTV9.lahoXrfLRy78w2P7Aj7hNp60Wtt7n5nkzjTrwJaDSHM";
 const RECONNECT_DELAY = 5000; // 5 seconds
 
 export function useWebSocket() {
