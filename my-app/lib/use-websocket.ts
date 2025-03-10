@@ -129,7 +129,7 @@ export function useWebSocket() {
             Authorization: `Bearer ${token}`,
             "Content-type": "application/json",
           },
-          body: JSON.stringify(message),
+          body: message,
         });
         console.log(`Sent message to ${destination}:`, message);
         return true;
