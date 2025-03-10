@@ -33,7 +33,7 @@ export interface WebSocketMessage {
   id: string
   content: string;
   senderId: string;
-  senderUsername: string;
+  senderUsername?: string;
   channelId?: string;
   receiverId: string;
   isDirectMessage?: boolean;

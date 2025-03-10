@@ -1,13 +1,30 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import SockJS from "sockjs-client";
 import { Client, Stomp, StompSubscription } from "@stomp/stompjs";
+import { WebSocketMessage } from "./types";
 
-const WS_URL = "https://soen341-deployement-latest.onrender.com/ws";
-const token =
-  "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJtb2UxMTQ3IiwiaWF0IjoxNzQxNDk2MDU1LCJleHAiOjE3NDE1ODI0NTV9.lahoXrfLRy78w2P7Aj7hNp60Wtt7n5nkzjTrwJaDSHM";
-const RECONNECT_DELAY = 5000; // 5 seconds
+// Define message types for better type safety
 
-export function useWebSocket() {
+
+interface UseWebSocketOptions {
+  wsUrl?: string;
+  token?: string;
+  userId?: string;
+  recipientId?: string;
+  autoConnect?: boolean;
+  debug?: boolean;
+}
+
+const DEFAULT_RECONNECT_DELAY = 5000; // 5 seconds
+
+export function useWebSocket({
+  wsUrl = "https://soen341-deployement-latest.onrender.com/ws",
+  token,
+  userId,
+  recipientId,
+  autoConnect = true,
+  debug = false,
+}: UseWebSocketOptions = {}) {
   const [stompClient, setStompClient] = useState<Client | null>(null);
   const [connected, setConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -37,12 +54,12 @@ export function useWebSocket() {
 
       // Create a new STOMP client
       const client = new Client({
-        webSocketFactory: () => new SockJS(WS_URL),
+        webSocketFactory: () => new SockJS(wsUrl),
         connectHeaders: {
           Authorization: `Bearer ${token}`,
         },
-        debug: (msg) => console.debug(msg), // Enable for debugging, disable in production
-        reconnectDelay: RECONNECT_DELAY,
+        debug: debug ? (msg) => console.debug(msg) : () => {}, // Enable for debugging, disable in production
+        reconnectDelay: DEFAULT_RECONNECT_DELAY,
       });
 
       // Connection lifecycle handlers
@@ -81,13 +98,15 @@ export function useWebSocket() {
       setTimeout(() => {
         setReconnectAttempts((prev) => prev + 1);
         connectWebSocket();
-      }, RECONNECT_DELAY);
+      }, DEFAULT_RECONNECT_DELAY);
     }
-  }, [reconnectAttempts]);
+  }, [token, wsUrl, debug, reconnectAttempts]);
 
   // Initial connection
   useEffect(() => {
-    connectWebSocket();
+    if (autoConnect) {
+      connectWebSocket();
+    }
 
     return () => {
       // Clean up subscriptions
@@ -113,46 +132,56 @@ export function useWebSocket() {
         }
       }
     };
-  }, [connectWebSocket]);
+  }, [connectWebSocket, autoConnect]);
 
   const sendMessage = useCallback(
-    (destination: string, message: string) => {
+    (destination: string, message: string | object) => {
       if (!stompClientRef.current || !connected) {
         console.error("Cannot send message: WebSocket not connected");
         return false;
       }
 
       try {
+        const messageBody =
+          typeof message === "string" ? message : JSON.stringify(message);
+
         stompClientRef.current.publish({
           destination: destination,
           headers: {
             Authorization: `Bearer ${token}`,
             "Content-type": "application/json",
           },
-          body: message,
+          body: messageBody,
         });
-        console.log(`Sent message to ${destination}:`, message);
+
+        if (debug) {
+          console.log(`Sent message to ${destination}:`, message);
+        }
         return true;
       } catch (error) {
         console.error("Error sending message:", error);
         return false;
       }
     },
-    [connected]
+    [connected, token, debug]
   );
 
   const subscribeToDestination = useCallback(
     (destination: string, callback: (message: any) => void) => {
       // Store as pending if not yet connected
       if (!stompClientRef.current || !connected) {
-        console.log(`Storing pending subscription to: ${destination}`);
+        if (debug) {
+          console.log(`Storing pending subscription to: ${destination}`);
+        }
         pendingSubscriptionsRef.current.set(destination, callback);
         return;
       }
 
       // Check if we're already subscribed to this destination
       if (!subscriptionsRef.current.has(destination)) {
-        console.log(`Subscribing to: ${destination}`);
+        if (debug) {
+          console.log(`Subscribing to: ${destination}`);
+        }
         try {
           const subscription = stompClientRef.current.subscribe(
             destination,
@@ -178,25 +207,30 @@ export function useWebSocket() {
         }
       }
     },
-    [connected]
+    [connected, token, debug]
   );
 
-  const unsubscribeFromDestination = useCallback((destination: string) => {
-    // Remove from pending subscriptions if it's there
-    pendingSubscriptionsRef.current.delete(destination);
+  const unsubscribeFromDestination = useCallback(
+    (destination: string) => {
+      // Remove from pending subscriptions if it's there
+      pendingSubscriptionsRef.current.delete(destination);
 
-    // Unsubscribe if we have an active subscription
-    const subscription = subscriptionsRef.current.get(destination);
-    if (subscription) {
-      console.log(`Unsubscribing from: ${destination}`);
-      try {
-        subscription.unsubscribe();
-      } catch (error) {
-        console.error(`Error unsubscribing from ${destination}:`, error);
+      // Unsubscribe if we have an active subscription
+      const subscription = subscriptionsRef.current.get(destination);
+      if (subscription) {
+        if (debug) {
+          console.log(`Unsubscribing from: ${destination}`);
+        }
+        try {
+          subscription.unsubscribe();
+        } catch (error) {
+          console.error(`Error unsubscribing from ${destination}:`, error);
+        }
+        subscriptionsRef.current.delete(destination);
       }
-      subscriptionsRef.current.delete(destination);
-    }
-  }, []);
+    },
+    [debug]
+  );
 
   // Force reconnection function
   const reconnect = useCallback(() => {
@@ -211,12 +245,96 @@ export function useWebSocket() {
     connectWebSocket();
   }, [connectWebSocket]);
 
+  // --- Chat-specific helper methods ---
+
+  // Subscribe to a channel (for group messages)
+  const subscribeToChannel = useCallback(
+    (channelId: string, callback: (message: WebSocketMessage) => void) => {
+      const destination = `/channel/${channelId}`;
+      subscribeToDestination(destination, callback);
+      return () => unsubscribeFromDestination(destination);
+    },
+    [subscribeToDestination, unsubscribeFromDestination]
+  );
+
+  // Subscribe to direct messages
+  const subscribeToDirectMessages = useCallback(
+    (callback: (message: WebSocketMessage) => void) => {
+      if (!recipientId) {
+        console.error(
+          "Cannot subscribe to direct messages: No recipientId provided"
+        );
+        return () => {};
+      }
+      const destination = `/user/${recipientId}/direct-messages`;
+      subscribeToDestination(destination, callback);
+      return () => unsubscribeFromDestination(destination);
+    },
+    [subscribeToDestination, unsubscribeFromDestination, userId]
+  );
+
+  // Send a message to a channel
+  const sendChannelMessage = useCallback(
+    (channelId: string, content: string, senderUsername: string) => {
+      if (!userId) {
+        console.error("Cannot send channel message: No userId provided");
+        return false;
+      }
+
+      const message: WebSocketMessage = {
+        id: "",
+        content,
+        senderId: userId,
+        receiverId: channelId,
+        channelId: channelId,
+        senderUsername,
+        timestamp: new Date(),
+      };
+
+      return sendMessage("/app/channel", message);
+    },
+    [sendMessage, userId]
+  );
+
+  // Send a direct message to another user
+  const sendDirectMessage = useCallback(
+    (receiverId: string, content: string, channelId: string) => {
+      if (!userId) {
+        console.error("Cannot send direct message: No userId provided");
+        return false;
+      }
+
+      const message: WebSocketMessage = {
+        id: "",
+        content,
+        senderId: userId,
+        receiverId,
+        channelId: channelId,
+        senderUsername: "",
+        isDirectMessage: true,
+        timestamp: new Date(),
+      };
+
+      return sendMessage("/app/direct-message", message);
+    },
+    [sendMessage, userId]
+  );
+
   return {
+    // Connection state
     connected,
+    error,
+    reconnect,
+
+    // Core WebSocket operations
     sendMessage,
     subscribeToDestination,
     unsubscribeFromDestination,
-    error,
-    reconnect,
+
+    // Chat-specific operations
+    subscribeToChannel,
+    subscribeToDirectMessages,
+    sendChannelMessage,
+    sendDirectMessage,
   };
 }
