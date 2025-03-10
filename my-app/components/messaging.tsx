@@ -44,12 +44,12 @@ export function Messaging() {
   const [selectedChannel, setSelectedChannel] = useState<Channel | null>(null);
 
   // Hard-coded values as requested
-  const userId = "67c5071c2f3f3c63306870b2";
+  const userId2 = "67c5071c2f3f3c63306870b2";
 
   const receipientId = "67cb641d1ab64f63672e5ad2";
 
   const token =
-    "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJtb2UxMTQ3IiwiaWF0IjoxNzQxNDk2MDU1LCJleHAiOjE3NDE1ODI0NTV9.lahoXrfLRy78w2P7Aj7hNp60Wtt7n5nkzjTrwJaDSHM";
+    "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJUdXRvcmlhbCIsImlhdCI6MTc0MTQ5NjM4MiwiZXhwIjoxNzQxNTgyNzgyfQ.ex4TXV8Uehk30jT9ov6eCUGaq9IiarXLSkYbeicYuvw";
 
   // WebSocket connection and handlers
   const {
