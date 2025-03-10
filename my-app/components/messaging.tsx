@@ -49,7 +49,7 @@ export function Messaging() {
   const receipientId = "67cb641d1ab64f63672e5ad2";
 
   const token =
-    "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJUdXRvcmlhbCIsImlhdCI6MTc0MTQ5NjM4MiwiZXhwIjoxNzQxNTgyNzgyfQ.ex4TXV8Uehk30jT9ov6eCUGaq9IiarXLSkYbeicYuvw";
+    "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJtb2UxMTQ3IiwiaWF0IjoxNzQxNTc5ODY1LCJleHAiOjE3NDE2NjYyNjV9.EbRGv-Se4WXMXoOUhzijewsBEG1MdNuO04BAf-DUalI";
 
   // WebSocket connection and handlers
   const {
@@ -486,13 +486,13 @@ export function Messaging() {
     try {
       if (isActiveChannelConversation) {
         // Send message to channel
-        wsSendChannelMessage(activeConversationId, content, currentUser?.username as string);
+        sendChannelMessage(activeConversationId, content);
         console.log("Sending message in first if-statement");
       } else {
         // Find recipient ID for direct message
         const dm = directMessages.find((d) => d.id === activeConversationId);
         if (dm && dm.participant) {
-          wsSendDirectMessage(receipientId, content, activeConversationId);
+          sendDirectMessage(receipientId, content, activeConversationId);
           console.log("Sending message in second if-statement");
         } else {
           console.error("Could not find participant for direct message");
@@ -526,7 +526,7 @@ export function Messaging() {
     );
 
     // Use the new hook's send function
-    sendMessage(`/app/channel`, messageData);
+    wsSendChannelMessage(channelId, content, currentUser?.username as string);
 
     // Optimistically add the message to the UI
     const tempId = `temp-${Date.now()}`;
@@ -577,7 +577,7 @@ export function Messaging() {
 
     try {
       // Use the new hook's send function
-      sendMessage(`/app/direct-messages`, messageData);
+      wsSendDirectMessage(receipientId, content, channelId);
 
       // Optimistically add the message to the UI
       const tempId = `temp-${Date.now()}`;
