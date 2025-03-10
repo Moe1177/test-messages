@@ -44,12 +44,12 @@ export function Messaging() {
   const [selectedChannel, setSelectedChannel] = useState<Channel | null>(null);
 
   // Hard-coded values as requested
-  const userId = "67c5071c2f3f3c63306870b2";
+  const userId2 = "67c5071c2f3f3c63306870b2";
 
-  const userId2 = "67cb641d1ab64f63672e5ad2";
+  const userId = "67cb641d1ab64f63672e5ad2";
   const otherUserId = "67c50a6da4d538066589c299";
   const token =
-    "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJtb2UxMTQ3IiwiaWF0IjoxNzQxNDk2MDU1LCJleHAiOjE3NDE1ODI0NTV9.lahoXrfLRy78w2P7Aj7hNp60Wtt7n5nkzjTrwJaDSHM";
+    "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJUdXRvcmlhbCIsImlhdCI6MTc0MTQ5NjM4MiwiZXhwIjoxNzQxNTgyNzgyfQ.ex4TXV8Uehk30jT9ov6eCUGaq9IiarXLSkYbeicYuvw";
 
   // WebSocket connection and handlers
   const {
@@ -480,7 +480,7 @@ export function Messaging() {
         // Find recipient ID for direct message
         const dm = directMessages.find((d) => d.id === activeConversationId);
         if (dm && dm.participant) {
-          sendDirectMessage(userId2, content);
+          sendDirectMessage(userId, content);
         } else {
           console.error("Could not find participant for direct message");
         }

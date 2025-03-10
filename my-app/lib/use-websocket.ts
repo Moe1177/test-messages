@@ -4,7 +4,7 @@ import { Client, Stomp, StompSubscription } from "@stomp/stompjs";
 
 const WS_URL = "https://soen341-deployement-latest.onrender.com/ws";
 const token =
-  "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJtb2UxMTQ3IiwiaWF0IjoxNzQxNDk2MDU1LCJleHAiOjE3NDE1ODI0NTV9.lahoXrfLRy78w2P7Aj7hNp60Wtt7n5nkzjTrwJaDSHM";
+  "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJUdXRvcmlhbCIsImlhdCI6MTc0MTQ5NjM4MiwiZXhwIjoxNzQxNTgyNzgyfQ.ex4TXV8Uehk30jT9ov6eCUGaq9IiarXLSkYbeicYuvw";
 const RECONNECT_DELAY = 5000; // 5 seconds
 
 export function useWebSocket() {
@@ -129,7 +129,7 @@ export function useWebSocket() {
             Authorization: `Bearer ${token}`,
             "Content-type": "application/json",
           },
-          body: JSON.stringify(message),
+          body: message,
         });
         console.log(`Sent message to ${destination}:`, message);
         return true;
