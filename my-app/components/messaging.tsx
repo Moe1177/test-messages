@@ -44,7 +44,7 @@ export function Messaging() {
   const [selectedChannel, setSelectedChannel] = useState<Channel | null>(null);
 
   // Hard-coded values as requested
-  const userId2 = "67c5071c2f3f3c63306870b2";
+  const userId = "67c5071c2f3f3c63306870b2";
 
   const receipientId = "67cb641d1ab64f63672e5ad2";
 
