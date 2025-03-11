@@ -6,7 +6,12 @@ import { WebSocketMessage } from "./types";
 
 const SOCKET_URL = "https://soen341-deployement-latest.onrender.com/ws"; // Spring Boot WebSocket endpoint
 
-const useChat = (channelId: string, userId: string, token: string, receiverId: string) => {
+const useChat = (
+  channelId: string,
+  userId: string,
+  token: string,
+  receiverId: string
+) => {
   const [messages, setMessages] = useState<WebSocketMessage[]>([]);
   const [client, setClient] = useState<Client | null>(null);
 
@@ -29,7 +34,16 @@ const useChat = (channelId: string, userId: string, token: string, receiverId: s
         });
 
         // ✅ Subscribe to direct messages
-        stompClient.subscribe(`/user/${receiverId}/direct-messages`, (message) => {
+        stompClient.subscribe(
+          `/user/${receiverId}/direct-messages`,
+          (message) => {
+            const newMessage = JSON.parse(message.body);
+            console.log("Received direct message:", newMessage);
+            setMessages((prev) => [...prev, newMessage]);
+          }
+        );
+
+        stompClient.subscribe(`/user/${userId}/direct-messages`, (message) => {
           const newMessage = JSON.parse(message.body);
           console.log("Received direct message:", newMessage);
           setMessages((prev) => [...prev, newMessage]);
