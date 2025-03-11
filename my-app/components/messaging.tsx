@@ -53,7 +53,8 @@ export function Messaging() {
   const { messages, sendGroupMessage, sendDirectMessage, setInitialMessages } = useChat(
     activeConversationId as string,
     userId,
-    token
+    token,
+    receipientId
   );
 
   // Initialize connection and fetch initial data
