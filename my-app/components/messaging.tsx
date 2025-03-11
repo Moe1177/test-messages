@@ -6,7 +6,7 @@ import { MessageInput } from "./message-input";
 import { Sidebar } from "./sidebar";
 import { ConversationHeader } from "./conversation-header";
 import type { User, Message, Channel, WebSocketMessage } from "@/lib/types";
-import { useWebSocket } from "@/lib/use-websocket";
+import useChat from "@/lib/use-websocket";
 import { CreateChannelDialog } from "./create-channel-dialog";
 import { CreateDirectMessageDialog } from "./create-direct-message-dialog";
 import { ChannelInviteDialog } from "./channel-invite-dialog";
@@ -29,7 +29,6 @@ export function Messaging() {
   const [directMessages, setDirectMessages] = useState<DirectMessageDisplay[]>(
     []
   );
-  const [messages, setMessages] = useState<Message[]>([]);
   const [activeConversationId, setActiveConversationId] = useState<
     string | null
   >(null);
@@ -51,31 +50,14 @@ export function Messaging() {
   const token =
     "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJtb2UxMTQ3IiwiaWF0IjoxNzQxNTc5ODY1LCJleHAiOjE3NDE2NjYyNjV9.EbRGv-Se4WXMXoOUhzijewsBEG1MdNuO04BAf-DUalI";
 
-  // WebSocket connection and handlers
-  const {
-    connected,
-    sendMessage,
-    subscribeToDestination,
-    unsubscribeFromDestination,
-    error: wsError,
-    // Add these chat-specific methods
-    subscribeToChannel,
-    subscribeToDirectMessages,
-    sendChannelMessage: wsSendChannelMessage,
-    sendDirectMessage: wsSendDirectMessage,
-  } = useWebSocket({
-    token: token,
-    userId: userId,
-    recipientId: receipientId,
-    debug: true, // Enable for development, disable in production
-  });
+  const { messages, sendGroupMessage, sendDirectMessage, setInitialMessages } = useChat(
+    activeConversationId as string,
+    userId,
+    token
+  );
 
   // Initialize connection and fetch initial data
   useEffect(() => {
-    if (!connected) {
-      console.log("Connecting to WebSocket...");
-    }
-
     // Fetch initial data
     fetchCurrentUser();
     fetchChannels();
@@ -83,43 +65,17 @@ export function Messaging() {
     fetchUsers();
   }, []);
 
+  // Subscribe to active conversation when it changes
   useEffect(() => {
-    if (connected) {
-      console.log("Setting up WebSocket subscriptions");
+    if (!activeConversationId) return;
+    console.log(
+      `Subscribing to ${
+        isActiveChannelConversation ? "channel" : "DM"
+      }: ${activeConversationId}`
+    );
+  }, [activeConversationId, isActiveChannelConversation]);
 
-      // Subscribe to user-specific direct messages
-      subscribeToDirectMessages((message) => {
-        console.log("Received user direct message:", message);
-        handleNewMessage(message as Message);
-      });
-
-      // Only subscribe to the active channel if there is one
-      if (activeConversationId && isActiveChannelConversation) {
-        console.log(`Subscribing to active channel: ${activeConversationId}`);
-        subscribeToChannel(activeConversationId, (message) => {
-          console.log("Received channel message:", message);
-          handleNewMessage(message as Message);
-        });
-      }
-
-      return () => {
-        // Cleanup will be handled by the useWebSocket hook
-        if (activeConversationId && isActiveChannelConversation) {
-          unsubscribeFromDestination(`/channel/${activeConversationId}`);
-        }
-      };
-    }
-  }, [
-    connected,
-    activeConversationId,
-    isActiveChannelConversation,
-    userId,
-    subscribeToDestination,
-    subscribeToChannel,
-    unsubscribeFromDestination,
-  ]);
-
-  // Create users map for MessageList component
+  // Create a map of users for easy lookup
   useEffect(() => {
     const map: Record<string, User> = {};
     users.forEach((user) => {
@@ -128,39 +84,6 @@ export function Messaging() {
     setUsersMap(map);
   }, [users]);
 
-  useEffect(() => {
-    const checkConnectionInterval = setInterval(() => {
-      if (!connected) {
-        console.log("Connection lost, attempting to reconnect...");
-        // You could trigger a reconnection here or show a UI indicator
-        // For now, we'll just notify the user
-        const reconnectMessage = {
-          id: `system-${Date.now()}`,
-          content:
-            "Connection to chat server lost. Messages may not be delivered. Trying to reconnect...",
-          senderId: "system",
-          senderUsername: "System",
-          timestamp: new Date(),
-          isSystemMessage: true,
-        };
-
-        // Only add this message if we have an active conversation
-        if (activeConversationId) {
-          setMessages((prev) => {
-            // Check if we already have a system message
-            const hasSystemMessage = prev.some((m) => m.senderId === "system");
-            if (!hasSystemMessage) {
-              return [...prev, reconnectMessage as unknown as Message];
-            }
-            return prev;
-          });
-        }
-      }
-    }, 10000); // Check every 10 seconds
-
-    return () => clearInterval(checkConnectionInterval);
-  }, [connected]);
-
   // Helper function to handle API responses
   const handleApiResponse = async (response: Response) => {
     if (!response.ok) {
@@ -168,6 +91,20 @@ export function Messaging() {
       throw new Error(`API error (${response.status}): ${text}`);
     }
     return response.json();
+  };
+
+  // Handle sending messages
+  const handleSendMessage = (content: string) => {
+    if (!activeConversationId) {
+      console.error("No active conversation selected");
+      return;
+    }
+
+    if (isActiveChannelConversation) {
+      sendGroupMessage(content);
+    } else {
+      sendDirectMessage(content, receipientId);
+    }
   };
 
   // API calls to fetch data
@@ -334,6 +271,8 @@ export function Messaging() {
 
   const fetchMessages = async (conversationId: string, isChannel: boolean) => {
     try {
+      if (!conversationId) return;
+
       const endpoint = `https://soen341-deployement-latest.onrender.com/api/messages/channel/${conversationId}`;
 
       const response = await fetch(endpoint, {
@@ -342,19 +281,25 @@ export function Messaging() {
           "Content-Type": "application/json",
         },
       });
+
       const data = await handleApiResponse(response);
 
       // Convert timestamps to Date objects
-      const messagesWithDateObjects = data.map((msg: any) => ({
+      const formattedMessages = data.map((msg: any) => ({
         ...msg,
         timestamp: new Date(msg.timestamp),
       }));
 
-      setMessages(messagesWithDateObjects);
       console.log(
-        `Fetched messages for channel ${conversationId}:`,
-        messagesWithDateObjects
+        `Fetched messages for ${
+          isChannel ? "channel" : "DM"
+        } ${conversationId}:`,
+        formattedMessages
       );
+
+      // ✅ No need to update `setMessages` manually – `useChat` handles this.
+      // Merge historical messages into useChat state.
+      setInitialMessages(formattedMessages);
     } catch (error) {
       console.error(
         `Error fetching messages for ${
@@ -362,234 +307,6 @@ export function Messaging() {
         } ${conversationId}:`,
         error
       );
-    }
-  };
-
-  // WebSocket message handlers
-  const handleNewMessage = useCallback(
-    (message: Message) => {
-      setMessages((prevMessages) => {
-        // Check if this message is already in our list to prevent duplicates
-        const messageExists = prevMessages.some(
-          (m) => m.id === message.id && message.id !== ""
-        );
-
-        if (messageExists) {
-          return prevMessages;
-        }
-
-        console.log("📩 New message received via WebSocket:", message);
-
-        // Normalize timestamp to ensure it's a Date object
-        const normalizedMessage = {
-          ...message,
-          timestamp:
-            message.timestamp instanceof Date
-              ? message.timestamp
-              : new Date(message.timestamp),
-        };
-
-        // Check if this message belongs to the active conversation
-        const belongsToActiveConversation =
-          (isActiveChannelConversation &&
-            activeConversationId === message.channelId) ||
-          (!isActiveChannelConversation &&
-            message.isDirectMessage &&
-            ((message.senderId === userId &&
-              message.receiverId === getActiveDirectMessage()?.receiverId) ||
-              (message.senderId === getActiveDirectMessage()?.receiverId &&
-                message.receiverId === userId)));
-
-        if (belongsToActiveConversation) {
-          console.log(
-            "Adding message to active conversation:",
-            normalizedMessage
-          );
-          return [...prevMessages, normalizedMessage];
-        }
-
-        return prevMessages;
-      });
-
-      // Update unread count for non-active conversations
-      if (!isMessageForActiveConversation(message)) {
-        if (message.channelId && !message.isDirectMessage) {
-          setChannels((prev) =>
-            prev.map((channel) => {
-              if (channel.id === message.channelId) {
-                return {
-                  ...channel,
-                  unreadCount: (channel.unreadCount || 0) + 1,
-                };
-              }
-              return channel;
-            })
-          );
-        } else if (message.isDirectMessage) {
-          setDirectMessages((prev) =>
-            prev.map((dm) => {
-              // Match DMs by sender ID for received messages
-              if (dm.participant.id === message.senderId) {
-                return {
-                  ...dm,
-                  unreadCount: (dm.unreadCount || 0) + 1,
-                };
-              }
-              return dm;
-            })
-          );
-        }
-      }
-    },
-    [activeConversationId, isActiveChannelConversation, userId]
-  );
-
-  const isMessageForActiveConversation = (message: Message): boolean => {
-    if (isActiveChannelConversation) {
-      return activeConversationId === message.channelId;
-    } else {
-      if (!message.isDirectMessage) return false;
-
-      const activeDM = getActiveDirectMessage();
-      if (!activeDM) return false;
-
-      return (
-        (message.senderId === userId &&
-          message.receiverId === activeDM.receiverId) ||
-        (message.senderId === activeDM.receiverId &&
-          message.receiverId === userId)
-      );
-    }
-  };
-
-  const handleChannelCreated = (channel: Channel) => {
-    const extendedChannel: ExtendedChannel = {
-      ...channel,
-      unreadCount: 0,
-    };
-    setChannels((prev) => [...prev, extendedChannel]);
-  };
-
-  // User actions
-  const handleSendMessage = (content: string) => {
-    if (!activeConversationId) {
-      console.error("No active conversation selected");
-      return;
-    }
-
-    if (!connected) {
-      console.error("WebSocket not connected");
-      alert("Not connected to chat server. Please wait or refresh the page.");
-      return;
-    }
-
-    try {
-      if (isActiveChannelConversation) {
-        // Send message to channel
-        sendChannelMessage(activeConversationId, content);
-        console.log("Sending message in first if-statement");
-      } else {
-        // Find recipient ID for direct message
-        const dm = directMessages.find((d) => d.id === activeConversationId);
-        if (dm && dm.participant) {
-          sendDirectMessage(receipientId, content, activeConversationId);
-          console.log("Sending message in second if-statement");
-        } else {
-          console.error("Could not find participant for direct message");
-        }
-      }
-    } catch (error) {
-      console.error("Error in handleSendMessage:", error);
-    }
-  };
-
-  const sendChannelMessage = (channelId: string, content: string) => {
-    if (!connected) {
-      console.error("Cannot send message: WebSocket not connected");
-      return;
-    }
-
-    // Create a message object that matches what the backend expects
-    const messageData: WebSocketMessage = {
-      content: content,
-      senderId: userId,
-      id: "", // This will be generated by the server
-      senderUsername: currentUser?.username || "TestUser",
-      receiverId: channelId, // For channel messages, receiverId is the channelId
-      channelId: channelId,
-      timestamp: new Date(),
-    };
-
-    console.log(
-      `Sending channel message to channel ${channelId}:`,
-      messageData
-    );
-
-    // Use the new hook's send function
-    wsSendChannelMessage(channelId, content, currentUser?.username as string);
-
-    // Optimistically add the message to the UI
-    const tempId = `temp-${Date.now()}`;
-    const optimisticMessage: Message = {
-      ...messageData,
-      id: tempId,
-    };
-
-    setMessages((prev) => [...prev, optimisticMessage]);
-  };
-
-  // Function to send a direct message
-  const sendDirectMessage = (
-    recipientId: string,
-    content: string,
-    channelId: string
-  ) => {
-    if (!connected) {
-      console.error("Cannot send message: WebSocket not connected");
-      alert(
-        "Cannot send message: Not connected to chat server. Please try again."
-      );
-      return;
-    }
-
-    // Check if we have a valid connection
-    if (!token) {
-      console.error("No authentication token found");
-      alert("Authentication error. Please log in again.");
-      return;
-    }
-
-    // Create a message object that matches what the backend expects
-    const messageData: WebSocketMessage = {
-      content: content,
-      senderId: userId,
-      id: "", // This will be generated by the server
-      senderUsername: currentUser?.username || "TestUser",
-      receiverId: recipientId,
-      timestamp: new Date(),
-      channelId: channelId,
-      isDirectMessage: true,
-    };
-
-    // Add debug information
-    console.log(`Attempting to send DM to ${recipientId}`);
-    console.log(`WebSocket connected status: ${connected}`);
-
-    try {
-      // Use the new hook's send function
-      wsSendDirectMessage(receipientId, content, channelId);
-
-      // Optimistically add the message to the UI
-      const tempId = `temp-${Date.now()}`;
-      const optimisticMessage: Message = {
-        ...messageData,
-        id: tempId,
-      };
-
-      setMessages((prev) => [...prev, optimisticMessage]);
-    } catch (error) {
-      console.error("Error sending direct message:", error);
-      alert("Failed to send message. Please try again.");
     }
   };
 
@@ -680,38 +397,25 @@ export function Messaging() {
     setShowChannelInvite(true);
   };
 
-  const handleConversationSelect = (id: string, isChannel: boolean) => {
-    // Unsubscribe from previous channel if it was a channel
-    if (activeConversationId && isActiveChannelConversation) {
-      unsubscribeFromDestination(`/channel/${activeConversationId}`);
-    }
+ const handleConversationSelect = (
+   conversationId: string,
+   isChannel: boolean
+ ) => {
+   if (!conversationId || activeConversationId === conversationId) return;
 
-    setActiveConversationId(id);
-    setIsActiveChannelConversation(isChannel);
-    setMessages([]);
-    fetchMessages(id, isChannel);
+   console.log(
+     `Switching to ${
+       isChannel ? "channel" : "direct message"
+     }: ${conversationId}`
+   );
 
-    // Subscribe to the new channel if it's a channel
-    if (isChannel && connected) {
-      subscribeToChannel(id, (message) => {
-        console.log("Received message in newly selected channel:", message);
-        handleNewMessage(message as Message);
-      });
-    }
+   // Update the active conversation and type
+   setActiveConversationId(conversationId);
+   setIsActiveChannelConversation(isChannel);
 
-    // Reset unread count for the selected conversation
-    if (isChannel) {
-      setChannels((prev) =>
-        prev.map((channel) =>
-          channel.id === id ? { ...channel, unreadCount: 0 } : channel
-        )
-      );
-    } else {
-      setDirectMessages((prev) =>
-        prev.map((dm) => (dm.id === id ? { ...dm, unreadCount: 0 } : dm))
-      );
-    }
-  };
+   // Fetch historical messages for the new conversation.
+   fetchMessages(conversationId, isChannel);
+ };
 
   // Get the active channel or direct message
   const getActiveChannel = (): Channel | null => {
@@ -747,12 +451,7 @@ export function Messaging() {
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
-      {wsError && (
-        <div className="absolute top-0 left-0 right-0 bg-red-500 text-white p-2 text-center">
-          WebSocket Error: {wsError}
-        </div>
-      )}
-
+      {/* Sidebar Navigation */}
       <Sidebar
         channels={channels}
         directMessages={directMessages}
@@ -781,14 +480,11 @@ export function Messaging() {
               }
             />
             <MessageList
-              messages={messages}
+              messages={messages} // messages now include historical messages merged with new ones
               currentUser={currentUser}
               users={usersMap}
             />
-            <MessageInput
-              onSendMessageAction={handleSendMessage}
-              // disabled={!connected}
-            />
+            <MessageInput onSendMessageAction={handleSendMessage} />
           </>
         )}
       </div>
@@ -803,7 +499,7 @@ export function Messaging() {
       {showCreateDM && (
         <CreateDirectMessageDialog
           users={users}
-          currentUserId={userId} // Using hardcoded userId
+          currentUserId={userId}
           onCloseAction={() => setShowCreateDM(false)}
           onCreateDirectMessageAction={handleCreateDirectMessage}
         />
