@@ -48,7 +48,7 @@ export function Messaging() {
   const receipientId = "67cb641d1ab64f63672e5ad2";
 
   const token =
-    "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJtb2UxMTQ3IiwiaWF0IjoxNzQxNTc5ODY1LCJleHAiOjE3NDE2NjYyNjV9.EbRGv-Se4WXMXoOUhzijewsBEG1MdNuO04BAf-DUalI";
+    "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJtb2UxMTQ3IiwiaWF0IjoxNzQxNjcwNjg1LCJleHAiOjE3NDE3NTcwODV9.AR-hnrDAxUi5X1a4Stp6NHp5u1_-RqPjxVEEb1eS1gs";
 
   const { messages, sendGroupMessage, sendDirectMessage, setInitialMessages } = useChat(
     activeConversationId as string,

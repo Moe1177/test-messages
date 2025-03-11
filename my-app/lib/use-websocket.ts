@@ -27,7 +27,7 @@ const useChat = (
         console.log("Connected to WebSocket");
 
         // ✅ Subscribe to group chat messages
-        stompClient.subscribe(`/channel/${channelId}`, (message) => {
+        stompClient.subscribe(`/topic/channel/${channelId}`, (message) => {
           const newMessage = JSON.parse(message.body);
           console.log("Received group message:", newMessage);
           setMessages((prev) => [...prev, newMessage]);
@@ -64,13 +64,13 @@ const useChat = (
   const sendGroupMessage = (content: string) => {
     if (client && client.connected) {
       client.publish({
-        destination: `/app/channel/${channelId}`,
+        destination: `/app/group-message`,
         body: JSON.stringify({
           content,
-          channelId: channelId,
+          channelId,
           senderId: userId,
           receiverId: channelId,
-          isDirectMessage: false,
+          directMessage: false,
         }),
       });
     }
@@ -86,7 +86,7 @@ const useChat = (
           senderId: userId,
           receiverId,
           channelId: channelId,
-          isDirectMessage: true,
+          directMessage: true,
         }),
       });
     }
