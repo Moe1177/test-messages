@@ -45,17 +45,31 @@ export function Messaging() {
   // Hard-coded values as requested
   const userId = "67c5071c2f3f3c63306870b2";
 
-  const receipientId = "67cb641d1ab64f63672e5ad2";
+  const getActiveDirectMessage = (): {
+    receiverId: string;
+    senderUsername: string;
+  } | null => {
+    if (!isActiveChannelConversation && activeConversationId) {
+      const dm = directMessages.find((d) => d.id === activeConversationId);
+      if (dm) {
+        console.log("Active DM recipitent ID: ", dm.participant.id);
+        return {
+          receiverId: dm.participant.id,
+          senderUsername: dm.participant.username,
+        };
+      }
+    }
+    return null;
+  };
+
+  const receiverId = getActiveDirectMessage()?.receiverId || "";
+  console.log("Receiver ID: ", receiverId);
 
   const token =
     "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJtb2UxMTQ3IiwiaWF0IjoxNzQxNjcwNjg1LCJleHAiOjE3NDE3NTcwODV9.AR-hnrDAxUi5X1a4Stp6NHp5u1_-RqPjxVEEb1eS1gs";
 
-  const { messages, sendGroupMessage, sendDirectMessage, setInitialMessages } = useChat(
-    activeConversationId as string,
-    userId,
-    token,
-    receipientId
-  );
+  const { messages, sendGroupMessage, sendDirectMessage, setInitialMessages } =
+    useChat(activeConversationId as string, userId, token, receiverId);
 
   // Initialize connection and fetch initial data
   useEffect(() => {
@@ -104,7 +118,7 @@ export function Messaging() {
     if (isActiveChannelConversation) {
       sendGroupMessage(content);
     } else {
-      sendDirectMessage(content, receipientId);
+      sendDirectMessage(content, receiverId);
     }
   };
 
@@ -398,46 +412,30 @@ export function Messaging() {
     setShowChannelInvite(true);
   };
 
- const handleConversationSelect = (
-   conversationId: string,
-   isChannel: boolean
- ) => {
-   if (!conversationId || activeConversationId === conversationId) return;
+  const handleConversationSelect = (
+    conversationId: string,
+    isChannel: boolean
+  ) => {
+    if (!conversationId || activeConversationId === conversationId) return;
 
-   console.log(
-     `Switching to ${
-       isChannel ? "channel" : "direct message"
-     }: ${conversationId}`
-   );
+    console.log(
+      `Switching to ${
+        isChannel ? "channel" : "direct message"
+      }: ${conversationId}`
+    );
 
-   // Update the active conversation and type
-   setActiveConversationId(conversationId);
-   setIsActiveChannelConversation(isChannel);
+    // Update the active conversation and type
+    setActiveConversationId(conversationId);
+    setIsActiveChannelConversation(isChannel);
 
-   // Fetch historical messages for the new conversation.
-   fetchMessages(conversationId, isChannel);
- };
+    // Fetch historical messages for the new conversation.
+    fetchMessages(conversationId, isChannel);
+  };
 
   // Get the active channel or direct message
   const getActiveChannel = (): Channel | null => {
     if (isActiveChannelConversation && activeConversationId) {
       return channels.find((c) => c.id === activeConversationId) || null;
-    }
-    return null;
-  };
-
-  const getActiveDirectMessage = (): {
-    receiverId: string;
-    senderUsername: string;
-  } | null => {
-    if (!isActiveChannelConversation && activeConversationId) {
-      const dm = directMessages.find((d) => d.id === activeConversationId);
-      if (dm) {
-        return {
-          receiverId: dm.participant.id,
-          senderUsername: dm.participant.username,
-        };
-      }
     }
     return null;
   };
