@@ -68,8 +68,59 @@ export function Messaging() {
   const token =
     "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJtb2UxMTQ3IiwiaWF0IjoxNzQxNjcwNjg1LCJleHAiOjE3NDE3NTcwODV9.AR-hnrDAxUi5X1a4Stp6NHp5u1_-RqPjxVEEb1eS1gs";
 
+    const handleNewDirectMessage = async (message: WebSocketMessage) => {
+  // Only proceed if it's a DM with a valid channel ID
+  if (!message.channelId || !message.isDirectMessage) return;
+
+  const exists = directMessages.some((dm) => dm.id === message.channelId);
+  if (!exists) {
+    try {
+      // Fetch the channel details from your backend
+      const response = await fetch(
+        `https://soen341-deployement-latest.onrender.com/api/channels/${message.channelId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch channel data: ${response.statusText}`);
+      }
+
+      // Parse the JSON response
+      const channelData = await response.json();
+
+      const recipient = users.find((user) => user.id === receiverId);
+
+      // Create a new DirectMessageDisplay object
+      const newDM: DirectMessageDisplay = {
+        id: channelData.id, // Unique channel ID from the backend
+        participant: recipient || {
+          id: receiverId,
+          username: "Unknown User",
+          email: "",
+          password: "",
+          channelIds: [],
+          directMessageIds: [],
+          adminsForWhichChannels: [],
+          status: "ONLINE",
+        },
+        unreadCount: 0,
+      };
+
+      // Update state so the new channel appears without a page refresh
+      setDirectMessages((prev) => [...prev, newDM]);
+    } catch (error) {
+      console.error("Error fetching new DM channel:", error);
+    }
+  }
+};
+
   const { messages, sendGroupMessage, sendDirectMessage, setInitialMessages } =
-    useChat(activeConversationId as string, userId, token, receiverId);
+    useChat(activeConversationId as string, userId, token, receiverId, handleNewDirectMessage);
 
   // Initialize connection and fetch initial data
   useEffect(() => {
@@ -383,7 +434,7 @@ export function Messaging() {
           channelIds: [],
           directMessageIds: [],
           adminsForWhichChannels: [],
-          status: "OFFLINE",
+          status: "ONLINE",
         },
         unreadCount: 0,
       };
@@ -479,7 +530,7 @@ export function Messaging() {
               }
             />
             <MessageList
-              messages={messages} // messages now include historical messages merged with new ones
+              messages={messages} 
               currentUser={currentUser}
               users={usersMap}
             />

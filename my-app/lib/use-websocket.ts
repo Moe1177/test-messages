@@ -10,7 +10,8 @@ const useChat = (
   channelId: string,
   userId: string,
   token: string,
-  receiverId: string
+  receiverId: string,
+  onNewDirectMessage?: (message: WebSocketMessage) => void
 ) => {
   const [messages, setMessages] = useState<WebSocketMessage[]>([]);
   const [client, setClient] = useState<Client | null>(null);
@@ -40,6 +41,14 @@ const useChat = (
             const newMessage = JSON.parse(message.body);
             console.log("Received direct message:", newMessage);
             setMessages((prev) => [...prev, newMessage]);
+
+            if (
+              onNewDirectMessage &&
+              newMessage.isDirectMessage &&
+              newMessage.channelId
+            ) {
+              onNewDirectMessage(newMessage);
+            }
           }
         );
 
@@ -47,6 +56,14 @@ const useChat = (
           const newMessage = JSON.parse(message.body);
           console.log("Received direct message:", newMessage);
           setMessages((prev) => [...prev, newMessage]);
+
+          if (
+            onNewDirectMessage &&
+            newMessage.isDirectMessage &&
+            newMessage.channelId
+          ) {
+            onNewDirectMessage(newMessage);
+          }
         });
       },
       onDisconnect: () => console.log("Disconnected"),
