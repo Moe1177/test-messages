@@ -44,9 +44,10 @@ const useChat = (
 
             if (
               onNewDirectMessage &&
-              newMessage.isDirectMessage &&
+              newMessage.directMessage &&
               newMessage.channelId
             ) {
+              console.log("Calling onNewDirectMessage");
               onNewDirectMessage(newMessage);
             }
           }
@@ -59,9 +60,10 @@ const useChat = (
 
           if (
             onNewDirectMessage &&
-            newMessage.isDirectMessage &&
+            newMessage.directMessage &&
             newMessage.channelId
           ) {
+            console.log("Calling onNewDirectMessage");
             onNewDirectMessage(newMessage);
           }
         });
