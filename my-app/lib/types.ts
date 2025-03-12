@@ -36,6 +36,6 @@ export interface WebSocketMessage {
   senderUsername?: string;
   channelId?: string;
   receiverId: string;
-  isDirectMessage?: boolean;
+  directMessage?: boolean;
   timestamp: Date;
 }

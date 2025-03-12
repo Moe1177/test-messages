@@ -73,7 +73,21 @@ export function Messaging() {
     // Only proceed if it's a DM with a valid channel ID
     if (!message.channelId || !message.directMessage) return;
 
-    const exists = directMessages.some((dm) => dm.id === message.channelId);
+
+    const normalizedId = message.channelId.trim();
+
+      const exists = directMessages.some((dm) => {
+        // Optionally log for debugging
+        console.log(
+          "Comparing dm.id:",
+          `"${dm.id}"`,
+          "to normalizedId:",
+          `"${normalizedId}"`
+        );
+        return dm.id === normalizedId;
+      });
+
+    console.log("DM exists:", exists);
     if (!exists) {
       try {
         // Fetch the channel details from your backend
@@ -96,12 +110,10 @@ export function Messaging() {
         // Parse the JSON response
         const channelData = await response.json();
 
-        const recipient = users.find((user) => user.id === receiverId);
-
         // Create a new DirectMessageDisplay object
         const newDM: DirectMessageDisplay = {
           id: channelData.id, // Unique channel ID from the backend
-          participant: recipient || {
+          participant: {
             id: receiverId,
             username: message.senderUserName || "Unknown User",
             email: "",
@@ -114,8 +126,11 @@ export function Messaging() {
           unreadCount: 1,
         };
 
-        // Update state so the new channel appears without a page refresh
-        setDirectMessages((prev) => [...prev, newDM]);
+        setDirectMessages((prev) => {
+          const exists = prev.some((dm) => dm.id === newDM.id);
+          if (exists) return prev; 
+          return [...prev, newDM];
+        });
       } catch (error) {
         console.error("Error fetching new DM channel:", error);
       }
@@ -467,6 +482,16 @@ export function Messaging() {
     }
   };
 
+  const filteredMessages = messages.filter((msg) => {
+    if (isActiveChannelConversation) {
+      // Show only group (non-DM) messages for the active channel
+      return !msg.directMessage && msg.channelId === activeConversationId;
+    } else {
+      // Show only direct messages for the active DM channel
+      return msg.directMessage && msg.channelId === activeConversationId;
+    }
+  });
+
   const handleViewChannelInvite = (channel: Channel) => {
     setSelectedChannel(channel);
     setShowChannelInvite(true);
@@ -539,7 +564,7 @@ export function Messaging() {
               }
             />
             <MessageList
-              messages={messages}
+              messages={filteredMessages}
               currentUser={currentUser}
               users={usersMap}
             />
